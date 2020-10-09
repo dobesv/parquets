@@ -1,4 +1,4 @@
-import varint = require('varint');
+import { encode as varintEncode, decode as varintDecode, encodingLength } from 'varint';
 import { PrimitiveType } from '../declare';
 import { CursorBuffer, ParquetCodecOptions } from './declare';
 
@@ -15,7 +15,7 @@ function encodeRunBitpacked(values: number[], opts: ParquetCodecOptions): Buffer
   }
 
   return Buffer.concat([
-    Buffer.from(varint.encode(((values.length / 8) << 1) | 1)),
+    Buffer.from(varintEncode(((values.length / 8) << 1) | 1)),
     buf
   ]);
 }
@@ -29,7 +29,7 @@ function encodeRunRepeated(value: number, count: number, opts: ParquetCodecOptio
   }
 
   return Buffer.concat([
-    Buffer.from(varint.encode(count << 1)),
+    Buffer.from(varintEncode(count << 1)),
     buf
   ]);
 }
@@ -135,8 +135,8 @@ export function decodeValues(type: PrimitiveType, cursor: CursorBuffer, count: n
 
   let values: number[] = [];
   while (values.length < count) {
-    const header = varint.decode(cursor.buffer, cursor.offset);
-    cursor.offset += varint.encodingLength(header);
+    const header = varintDecode(cursor.buffer, cursor.offset);
+    cursor.offset += encodingLength(header);
     if (header & 1) {
       const count = (header >> 1) * 8;
       values.push(...decodeRunBitpacked(cursor, count, opts));
