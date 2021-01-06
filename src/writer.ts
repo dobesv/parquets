@@ -194,15 +194,21 @@ export class ParquetEnvelopeWriter {
   }
 
   public schema: ParquetSchema;
-  public write: (buf: Buffer) => void;
-  public close: () => void;
+  public write: (buf: Buffer) => Promise<void>;
+  public close: () => Promise<void>;
   public offset: number;
   public rowCount: number;
   public rowGroups: RowGroup[];
   public pageSize: number;
   public useDataPageV2: boolean;
 
-  constructor(schema: ParquetSchema, writeFn: (buf: Buffer) => void, closeFn: () => void, fileOffset: number, opts: ParquetWriterOptions) {
+  constructor(
+    schema: ParquetSchema,
+    writeFn: (buf: Buffer) => Promise<void>,
+    closeFn: () => Promise<void>,
+    fileOffset: number,
+    opts: ParquetWriterOptions
+  ) {
     this.schema = schema;
     this.write = writeFn;
     this.close = closeFn;
@@ -213,7 +219,7 @@ export class ParquetEnvelopeWriter {
     this.useDataPageV2 = ('useDataPageV2' in opts) ? opts.useDataPageV2 : false;
   }
 
-  writeSection(buf: Buffer): void {
+  writeSection(buf: Buffer): Promise<void> {
     this.offset += buf.length;
     return this.write(buf);
   }
@@ -221,7 +227,7 @@ export class ParquetEnvelopeWriter {
   /**
    * Encode the parquet file header
    */
-  writeHeader(): void {
+  writeHeader(): Promise<void> {
     return this.writeSection(Buffer.from(PARQUET_MAGIC));
   }
 
@@ -229,16 +235,12 @@ export class ParquetEnvelopeWriter {
    * Encode a parquet row group. The records object should be created using the
    * shredRecord method
    */
-  writeRowGroup(records: ParquetBuffer): void {
-    const rgroup = encodeRowGroup(
-      this.schema,
-      records,
-      {
-        baseOffset: this.offset,
-        pageSize: this.pageSize,
-        useDataPageV2: this.useDataPageV2
-      }
-    );
+  writeRowGroup(records: ParquetBuffer): Promise<void> {
+    const rgroup = encodeRowGroup(this.schema, records, {
+      baseOffset: this.offset,
+      pageSize: this.pageSize,
+      useDataPageV2: this.useDataPageV2,
+    });
 
     this.rowCount += records.rowCount;
     this.rowGroups.push(rgroup.metadata);
@@ -248,7 +250,7 @@ export class ParquetEnvelopeWriter {
   /**
    * Write the parquet file footer
    */
-  writeFooter(userMetadata: Record<string, string>): void {
+  writeFooter(userMetadata: Record<string, string>): Promise<void> {
     if (!userMetadata) {
       // tslint:disable-next-line:no-parameter-reassignment
       userMetadata = {};
@@ -270,29 +272,70 @@ export class ParquetEnvelopeWriter {
  * Create a parquet transform stream
  */
 export class ParquetTransformer<T> extends Transform {
-
   public writer: ParquetWriter<T>;
+  waiting: [() => void, (reason?: any) => void][] = [];
 
   constructor(schema: ParquetSchema, opts: ParquetWriterOptions = {}) {
     super({ objectMode: true });
-
-    const writeProxy = (function (t: ParquetTransformer<any>) {
-      return function (b: any) {
-        t.push(b);
+    const writeFn = (function (t: ParquetTransformer<any>) {
+      return function (b: any): Promise<void> {
+        if (!t.push(b)) {
+          // stop writing until the readable is ready again
+          return new Promise((resolve, reject) => {
+            t.waiting.push([resolve, reject]);
+          });
+        }
+        return Promise.resolve();
       };
     })(this);
-
+    const closeFn = (function (t: ParquetTransformer<any>) {
+      return function (): Promise<void> {
+        t.push(null);
+        return Promise.resolve();
+      };
+    })(this);
     this.writer = new ParquetWriter(
       schema,
-      new ParquetEnvelopeWriter(schema, writeProxy, () => ({}), 0, opts),
+      new ParquetEnvelopeWriter(schema, writeFn, closeFn, 0, opts),
       opts
     );
+  }
+
+  // If I/O was delayed due to backpressure and then the stream is destroyed,
+  // propagate an error back to the callee of the I/O operation(s)
+  // tslint:disable-next-line:function-name
+  _destroy(err: Error | null, cb: (err?: Error | null) => void) {
+    try {
+      if (this.waiting.length) {
+        const waiting = this.waiting;
+        this.waiting = [];
+        waiting.forEach(([_, reject]) => reject(err));
+      }
+      cb();
+    } catch (err) {
+      cb(err);
+    }
+  }
+
+  // If we get backpressure we will delay returning from a call to write until
+  // the next call to _read
+  // tslint:disable-next-line:function-name
+  _read(arg?: any) {
+    if (this.waiting.length) {
+      const waiting = this.waiting;
+      this.waiting = [];
+      waiting.forEach(([resolve]) => resolve());
+    }
+    return super._read(arg);
   }
 
   // tslint:disable-next-line:function-name
   _transform(row: any, encoding: string, callback: TransformCallback) {
     if (row) {
-      this.writer.appendRow(row).then(() => callback(), err => callback(err));
+      this.writer.appendRow(row).then(
+        () => callback(),
+        err => callback(err)
+      );
     } else {
       callback();
     }
@@ -302,7 +345,6 @@ export class ParquetTransformer<T> extends Transform {
   _flush(callback: (val?: any) => void) {
     this.writer.close(callback);
   }
-
 }
 
 /**
