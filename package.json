@@ -1,7 +1,7 @@
 {
-  "name": "parquets",
+  "name": "@dobesv/parquets",
   "description": "TypeScript implementation of the Parquet file format, based on parquet.js",
-  "version": "0.10.10",
+  "version": "0.10.10-p1",
   "upstream": "0.10.1",
   "homepage": "https://github.com/kbajalc/parquets",
   "author": "kbajalc@gmail.com",
@@ -18,8 +18,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/kbajalc/parquets.git"
+    "url": "git://github.com/dobesv/parquets.git"
   },
+  "publishConfig": { "registry": "https://npm.pkg.github.com/", "access": "public"},
   "files": [
     "lib",
     "src"

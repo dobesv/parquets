@@ -57,7 +57,11 @@ export class ParquetWriter<T> {
    * Convenience method to create a new buffered parquet writer that writes to
    * the specified file
    */
-  static async openFile<T>(schema: ParquetSchema, path: string, opts?: ParquetWriterOptions): Promise<ParquetWriter<T>> {
+  static async openFile<T>(
+    schema: ParquetSchema,
+    path: string,
+    opts?: ParquetWriterOptions
+  ): Promise<ParquetWriter<T>> {
     const outputStream = await Util.osopen(path, opts);
     return ParquetWriter.openStream(schema, outputStream, opts);
   }
@@ -66,7 +70,11 @@ export class ParquetWriter<T> {
    * Convenience method to create a new buffered parquet writer that writes to
    * the specified stream
    */
-  static async openStream<T>(schema: ParquetSchema, outputStream: Writable, opts?: ParquetWriterOptions): Promise<ParquetWriter<T>> {
+  static async openStream<T>(
+    schema: ParquetSchema,
+    outputStream: Writable,
+    opts?: ParquetWriterOptions
+  ): Promise<ParquetWriter<T>> {
     if (!opts) {
       // tslint:disable-next-line:no-parameter-reassignment
       opts = {};
@@ -91,7 +99,11 @@ export class ParquetWriter<T> {
   /**
    * Create a new buffered parquet writer for a given envelope writer
    */
-  constructor(schema: ParquetSchema, envelopeWriter: ParquetEnvelopeWriter, opts: ParquetWriterOptions) {
+  constructor(
+    schema: ParquetSchema,
+    envelopeWriter: ParquetEnvelopeWriter,
+    opts: ParquetWriterOptions
+  ) {
     this.schema = schema;
     this.envelopeWriter = envelopeWriter;
     this.rowBuffer = {};
@@ -135,7 +147,10 @@ export class ParquetWriter<T> {
 
     this.closed = true;
 
-    if (this.rowBuffer.rowCount > 0 || this.rowBuffer.rowCount >= this.rowGroupSize) {
+    if (
+      this.rowBuffer.rowCount > 0 ||
+      this.rowBuffer.rowCount >= this.rowGroupSize
+    ) {
       await this.envelopeWriter.writeRowGroup(this.rowBuffer);
       this.rowBuffer = {};
     }
@@ -183,11 +198,14 @@ export class ParquetWriter<T> {
  * called in the correct order to produce a valid file.
  */
 export class ParquetEnvelopeWriter {
-
   /**
    * Create a new parquet envelope writer that writes to the specified stream
    */
-  static async openStream(schema: ParquetSchema, outputStream: Writable, opts: ParquetWriterOptions): Promise<ParquetEnvelopeWriter> {
+  static async openStream(
+    schema: ParquetSchema,
+    outputStream: Writable,
+    opts: ParquetWriterOptions
+  ): Promise<ParquetEnvelopeWriter> {
     const writeFn = Util.oswrite.bind(undefined, outputStream);
     const closeFn = Util.osclose.bind(undefined, outputStream);
     return new ParquetEnvelopeWriter(schema, writeFn, closeFn, 0, opts);
@@ -216,7 +234,7 @@ export class ParquetEnvelopeWriter {
     this.rowCount = 0;
     this.rowGroups = [];
     this.pageSize = opts.pageSize || PARQUET_DEFAULT_PAGE_SIZE;
-    this.useDataPageV2 = ('useDataPageV2' in opts) ? opts.useDataPageV2 : false;
+    this.useDataPageV2 = 'useDataPageV2' in opts ? opts.useDataPageV2 : false;
   }
 
   writeSection(buf: Buffer): Promise<void> {
@@ -256,7 +274,9 @@ export class ParquetEnvelopeWriter {
       userMetadata = {};
     }
 
-    return this.writeSection(encodeFooter(this.schema, this.rowCount, this.rowGroups, userMetadata));
+    return this.writeSection(
+      encodeFooter(this.schema, this.rowCount, this.rowGroups, userMetadata)
+    );
   }
 
   /**
@@ -350,7 +370,12 @@ export class ParquetTransformer<T> extends Transform {
 /**
  * Encode a consecutive array of data using one of the parquet encodings
  */
-function encodeValues(type: PrimitiveType, encoding: ParquetCodec, values: any[], opts: ParquetCodecOptions) {
+function encodeValues(
+  type: PrimitiveType,
+  encoding: ParquetCodec,
+  values: any[],
+  opts: ParquetCodecOptions
+) {
   if (!(encoding in PARQUET_CODEC)) {
     throw new Error(`invalid encoding: ${encoding}`);
   }
@@ -364,9 +389,9 @@ function encodeDataPage(
   column: ParquetField,
   data: ParquetData
 ): {
-  header: PageHeader,
-  headerSize: number,
-  page: Buffer
+  header: PageHeader;
+  headerSize: number;
+  page: Buffer;
 } {
   /* encode repetition and definition levels */
   let rLevelsBuf = Buffer.alloc(0);
@@ -376,7 +401,7 @@ function encodeDataPage(
       PARQUET_RDLVL_ENCODING,
       data.rlevels,
       {
-        bitWidth: Util.getBitWidth(column.rLevelMax)
+        bitWidth: Util.getBitWidth(column.rLevelMax),
         // disableEnvelope: false
       }
     );
@@ -389,7 +414,7 @@ function encodeDataPage(
       PARQUET_RDLVL_ENCODING,
       data.dlevels,
       {
-        bitWidth: Util.getBitWidth(column.dLevelMax)
+        bitWidth: Util.getBitWidth(column.dLevelMax),
         // disableEnvelope: false
       }
     );
@@ -403,11 +428,7 @@ function encodeDataPage(
     { typeLength: column.typeLength, bitWidth: column.typeLength }
   );
 
-  const dataBuf = Buffer.concat([
-    rLevelsBuf,
-    dLevelsBuf,
-    valuesBuf
-  ]);
+  const dataBuf = Buffer.concat([rLevelsBuf, dLevelsBuf, valuesBuf]);
 
   // compression = column.compression === 'UNCOMPRESSED' ? (compression || 'UNCOMPRESSED') : column.compression;
   const compressedBuf = Compression.deflate(column.compression, dataBuf);
@@ -418,21 +439,16 @@ function encodeDataPage(
     data_page_header: new DataPageHeader({
       num_values: data.count,
       encoding: Encoding[column.encoding] as any,
-      definition_level_encoding:
-        Encoding[PARQUET_RDLVL_ENCODING], // [PARQUET_RDLVL_ENCODING],
-      repetition_level_encoding:
-        Encoding[PARQUET_RDLVL_ENCODING], // [PARQUET_RDLVL_ENCODING]
+      definition_level_encoding: Encoding[PARQUET_RDLVL_ENCODING], // [PARQUET_RDLVL_ENCODING],
+      repetition_level_encoding: Encoding[PARQUET_RDLVL_ENCODING], // [PARQUET_RDLVL_ENCODING]
     }),
     uncompressed_page_size: dataBuf.length,
-    compressed_page_size: compressedBuf.length
+    compressed_page_size: compressedBuf.length,
   });
 
   /* concat page header, repetition and definition levels and values */
   const headerBuf = Util.serializeThrift(header);
-  const page = Buffer.concat([
-    headerBuf,
-    compressedBuf
-  ]);
+  const page = Buffer.concat([headerBuf, compressedBuf]);
 
   return { header, headerSize: headerBuf.length, page };
 }
@@ -445,17 +461,18 @@ function encodeDataPageV2(
   data: ParquetData,
   rowCount: number
 ): {
-  header: PageHeader,
-  headerSize: number,
-  page: Buffer
+  header: PageHeader;
+  headerSize: number;
+  page: Buffer;
 } {
   /* encode values */
   const valuesBuf = encodeValues(
     column.primitiveType,
     column.encoding,
-    data.values, {
+    data.values,
+    {
       typeLength: column.typeLength,
-      bitWidth: column.typeLength
+      bitWidth: column.typeLength,
     }
   );
 
@@ -468,9 +485,10 @@ function encodeDataPageV2(
     rLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.rlevels, {
+      data.rlevels,
+      {
         bitWidth: Util.getBitWidth(column.rLevelMax),
-        disableEnvelope: true
+        disableEnvelope: true,
       }
     );
   }
@@ -480,9 +498,10 @@ function encodeDataPageV2(
     dLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.dlevels, {
+      data.dlevels,
+      {
         bitWidth: Util.getBitWidth(column.dLevelMax),
-        disableEnvelope: true
+        disableEnvelope: true,
       }
     );
   }
@@ -497,10 +516,12 @@ function encodeDataPageV2(
       encoding: Encoding[column.encoding] as any,
       definition_levels_byte_length: dLevelsBuf.length,
       repetition_levels_byte_length: rLevelsBuf.length,
-      is_compressed: column.compression !== 'UNCOMPRESSED'
+      is_compressed: column.compression !== 'UNCOMPRESSED',
     }),
-    uncompressed_page_size: rLevelsBuf.length + dLevelsBuf.length + valuesBuf.length,
-    compressed_page_size: rLevelsBuf.length + dLevelsBuf.length + compressedBuf.length
+    uncompressed_page_size:
+      rLevelsBuf.length + dLevelsBuf.length + valuesBuf.length,
+    compressed_page_size:
+      rLevelsBuf.length + dLevelsBuf.length + compressedBuf.length,
   });
 
   /* concat page header, repetition and definition levels and values */
@@ -509,7 +530,7 @@ function encodeDataPageV2(
     headerBuf,
     rLevelsBuf,
     dLevelsBuf,
-    compressedBuf
+    compressedBuf,
   ]);
   return { header, headerSize: headerBuf.length, page };
 }
@@ -545,8 +566,10 @@ function encodeColumnChunk(
     }
     // pages.push(result.page);
     pageBuf = result.page;
-    total_uncompressed_size += result.header.uncompressed_page_size + result.headerSize;
-    total_compressed_size += result.header.compressed_page_size + result.headerSize;
+    total_uncompressed_size +=
+      result.header.uncompressed_page_size + result.headerSize;
+    total_compressed_size +=
+      result.header.compressed_page_size + result.headerSize;
   }
 
   // const pagesBuf = Buffer.concat(pages);
@@ -561,7 +584,7 @@ function encodeColumnChunk(
     total_uncompressed_size, //  : pagesBuf.length,
     total_compressed_size,
     type: Type[column.primitiveType],
-    codec: CompressionCodec[column.compression]
+    codec: CompressionCodec[column.compression],
   });
 
   /* list encodings */
@@ -577,14 +600,18 @@ function encodeColumnChunk(
 /**
  * Encode a list of column values into a parquet row group
  */
-function encodeRowGroup(schema: ParquetSchema, data: ParquetBuffer, opts: ParquetWriterOptions): {
+function encodeRowGroup(
+  schema: ParquetSchema,
+  data: ParquetBuffer,
+  opts: ParquetWriterOptions
+): {
   body: Buffer;
   metadata: RowGroup;
 } {
   const metadata = new RowGroup({
     num_rows: data.rowCount,
     columns: [],
-    total_byte_size: 0
+    total_byte_size: 0,
   });
 
   let body = Buffer.alloc(0);
@@ -597,11 +624,13 @@ function encodeRowGroup(schema: ParquetSchema, data: ParquetBuffer, opts: Parque
 
     const cchunk = new ColumnChunk({
       file_offset: cchunkData.metadataOffset,
-      meta_data: cchunkData.metadata
+      meta_data: cchunkData.metadata,
     });
 
     metadata.columns.push(cchunk);
-    metadata.total_byte_size = new Int64(+metadata.total_byte_size + cchunkData.body.length);
+    metadata.total_byte_size = new Int64(
+      +metadata.total_byte_size + cchunkData.body.length
+    );
 
     body = Buffer.concat([body, cchunkData.body]);
   }
@@ -612,20 +641,25 @@ function encodeRowGroup(schema: ParquetSchema, data: ParquetBuffer, opts: Parque
 /**
  * Encode a parquet file metadata footer
  */
-function encodeFooter(schema: ParquetSchema, rowCount: number, rowGroups: RowGroup[], userMetadata: Record<string, string>): Buffer {
+function encodeFooter(
+  schema: ParquetSchema,
+  rowCount: number,
+  rowGroups: RowGroup[],
+  userMetadata: Record<string, string>
+): Buffer {
   const metadata = new FileMetaData({
     version: PARQUET_VERSION,
     created_by: 'parquets',
     num_rows: rowCount,
     row_groups: rowGroups,
     schema: [],
-    key_value_metadata: []
+    key_value_metadata: [],
   });
 
   for (const key in userMetadata) {
     const kv = new KeyValue({
       key,
-      value: userMetadata[key]
+      value: userMetadata[key],
     });
     metadata.key_value_metadata.push(kv);
   }
@@ -633,7 +667,7 @@ function encodeFooter(schema: ParquetSchema, rowCount: number, rowGroups: RowGro
   {
     const schemaRoot = new SchemaElement({
       name: 'root',
-      num_children: Object.keys(schema.fields).length
+      num_children: Object.keys(schema.fields).length,
     });
     metadata.schema.push(schemaRoot);
   }
@@ -642,7 +676,7 @@ function encodeFooter(schema: ParquetSchema, rowCount: number, rowGroups: RowGro
     const relt = FieldRepetitionType[field.repetitionType];
     const schemaElem = new SchemaElement({
       name: field.name,
-      repetition_type: relt as any
+      repetition_type: relt as any,
     });
 
     if (field.isNested) {
@@ -652,7 +686,9 @@ function encodeFooter(schema: ParquetSchema, rowCount: number, rowGroups: RowGro
     }
 
     if (field.originalType) {
-      schemaElem.converted_type = ConvertedType[field.originalType] as ConvertedType;
+      schemaElem.converted_type = ConvertedType[
+        field.originalType
+      ] as ConvertedType;
     }
 
     schemaElem.type_length = field.typeLength;
