@@ -1,10 +1,9 @@
 import 'jest';
+import { promisify } from 'util';
 import { ParquetCompression } from '../src';
 import chai = require('chai');
 import fs = require('fs');
 import parquet = require('../src');
-import { promisify } from 'util';
-
 const assert = chai.assert;
 const objectStream = require('object-stream');
 
