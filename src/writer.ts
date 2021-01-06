@@ -345,16 +345,16 @@ export class ParquetTransformer<T> extends Transform {
   // If I/O was delayed due to backpressure and then the stream is destroyed,
   // propagate an error back to the callee of the I/O operation(s)
   // tslint:disable-next-line:function-name
-  _destroy(err: Error | null, cb: (err?: Error | null) => void) {
+  _destroy(error: Error | null, callback: (error: Error | null) => void): void {
     try {
       if (this.waiting.length) {
         const waiting = this.waiting;
         this.waiting = [];
-        waiting.forEach(([_, reject]) => reject(err));
+        waiting.forEach(([resolve, reject]) => error ? reject(error) : resolve());
       }
-      cb();
+      callback(null);
     } catch (err) {
-      cb(err);
+      callback(err);
     }
   }
 
