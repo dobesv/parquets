@@ -1,6 +1,6 @@
 import fs = require('fs');
 import { TBufferedTransport, TCompactProtocol, TFramedTransport } from 'thrift';
-import { FileMetaData, PageHeader } from './thrift';
+import { FileMetaData, PageHeader, RowGroup } from './thrift';
 import { Writable } from 'stream';
 
 export interface WriteStreamOptions {
@@ -22,7 +22,7 @@ class UFramedTransport extends TFramedTransport {
 export function serializeThrift(obj: any): Buffer {
   const output: Buffer[] = [];
 
-  const transport = new TBufferedTransport(null, (buf) => {
+  const transport = new TBufferedTransport(null, buf => {
     output.push(buf);
   });
 
@@ -120,7 +120,11 @@ export function fstat(filePath: string): Promise<fs.Stats> {
   });
 }
 
-export function fread(fd: number, position: number, length: number): Promise<Buffer> {
+export function fread(
+  fd: number,
+  position: number,
+  length: number
+): Promise<Buffer> {
   const buffer = Buffer.alloc(length);
   return new Promise((resolve, reject) => {
     fs.read(fd, buffer, 0, length, position, (err, bytesRead, buf) => {
@@ -135,7 +139,7 @@ export function fread(fd: number, position: number, length: number): Promise<Buf
 
 export function fclose(fd: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    fs.close(fd, (err) => {
+    fs.close(fd, err => {
       if (err) {
         reject(err);
       } else {
@@ -147,7 +151,7 @@ export function fclose(fd: number): Promise<void> {
 
 export function oswrite(os: Writable, buf: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
-    os.write(buf, (err) => {
+    os.write(buf, err => {
       if (err) {
         reject(err);
       } else {
@@ -169,7 +173,10 @@ export function osclose(os: Writable): Promise<void> {
   });
 }
 
-export function osopen(path: string, opts: WriteStreamOptions): Promise<fs.WriteStream> {
+export function osopen(
+  path: string,
+  opts: WriteStreamOptions
+): Promise<fs.WriteStream> {
   return new Promise((resolve, reject) => {
     const outputStream = fs.createWriteStream(path, opts);
     outputStream.once('open', fd => resolve(outputStream));
@@ -185,7 +192,8 @@ export function fieldIndexOf(arr: string[][], elem: string[]): number {
     if (arr[j].length > elem.length) continue;
     let m = true;
     for (let i = 0; i < elem.length; i++) {
-      if (arr[j][i] === elem[i] || arr[j][i] === '+' || arr[j][i] === '#') continue;
+      if (arr[j][i] === elem[i] || arr[j][i] === '+' || arr[j][i] === '#')
+        continue;
       if (i >= arr[j].length && arr[j][arr[j].length - 1] === '#') continue;
       m = false;
       break;
@@ -195,6 +203,23 @@ export function fieldIndexOf(arr: string[][], elem: string[]): number {
   return -1;
 }
 
+/**
+ * Compare two arrays of strings.  Used to compare field paths.
+ */
+export function stringArraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((aa, idx) => aa === b[idx]);
+}
+
+/**
+ * Find a column chunk in a row group matching the given field path
+ * @param name
+ */
+export function findColumnChunk(rowGroup: RowGroup, name: string[]) {
+  return rowGroup.columns.find(cc =>
+    stringArraysEqual(cc.meta_data.path_in_schema, name)
+  );
+}
+
 export function load(name: string): any {
-  return (module || global as any)['require'](name);
+  return (module || (global as any))['require'](name);
 }
