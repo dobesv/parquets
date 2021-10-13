@@ -7,3 +7,11 @@ build
 dump
 data
 .idea
+
+# Yarn
+yarn-error.log
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/versions
+.pnp.*

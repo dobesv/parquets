@@ -1,7 +1,7 @@
 {
   "name": "@dobesv/parquets",
   "description": "TypeScript implementation of the Parquet file format, based on parquet.js",
-  "version": "0.10.10-p1",
+  "version": "0.11.0",
   "upstream": "0.10.1",
   "homepage": "https://github.com/dobesv/parquets",
   "author": "dobes@formative.com",
@@ -29,14 +29,14 @@
     "src"
   ],
   "scripts": {
-    "clean": "rm -rf ./lib && rm -rf ./build",
-    "build": "npm run clean ; tsc -p src ; tsc -p .",
-    "watch": "npm run clean ; tsc -p . --watch",
-    "test": "npm run build && jest --verbose test/*.ts",
+    "clean": "yarn rimraf ./lib ./build",
+    "build": "yarn clean ; yarn tsc",
+    "watch": "yarn clean ; yarn tsc --watch",
+    "test": "yarn build && yarn jest --verbose test/*.ts",
     "peer": "npm i brotli lzo lz4js --no-save",
     "upver": "npm version patch && git push --follow-tags",
-    "release": "npm run build && git push --follow-tags && npm publish",
-    "beta": "npm run build && git push --follow-tags && npm publish --tag beta",
+    "release": "yarn build && git push --follow-tags && npm publish",
+    "beta": "yarn build && git push --follow-tags && npm publish --tag beta",
     "tsgen": "thrift-typescript --target apache --rootDir . --sourceDir . --outDir codegen parquet.thrift",
     "tsgencore": "thrift-typescript --target thrift-server --rootDir . --sourceDir . --outDir codegen parquet.thrift",
     "thrift": "thrift --gen js:node parquet.thrift && thrift --gen js:ts parquet.thrift"
@@ -79,6 +79,7 @@
     "lzo": "^0.4.11",
     "object-stream": "0.0.1",
     "prettier": "^2.4.1",
+    "rimraf": "^3.0.2",
     "snappy": "^6.3.5",
     "test-jest": "^1.0.1",
     "ts-jest": "^24.0.2",
