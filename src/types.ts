@@ -13,129 +13,129 @@ export const PARQUET_LOGICAL_TYPES: Record<ParquetType, ParquetTypeKit> = {
   BOOLEAN: {
     primitiveType: 'BOOLEAN',
     toPrimitive: toPrimitive_BOOLEAN,
-    fromPrimitive: fromPrimitive_BOOLEAN
+    fromPrimitive: fromPrimitive_BOOLEAN,
   },
   INT32: {
     primitiveType: 'INT32',
-    toPrimitive: toPrimitive_INT32
+    toPrimitive: toPrimitive_INT32,
   },
   INT64: {
     primitiveType: 'INT64',
-    toPrimitive: toPrimitive_INT64
+    toPrimitive: toPrimitive_INT64,
   },
   INT96: {
     primitiveType: 'INT96',
-    toPrimitive: toPrimitive_INT96
+    toPrimitive: toPrimitive_INT96,
   },
   FLOAT: {
     primitiveType: 'FLOAT',
-    toPrimitive: toPrimitive_FLOAT
+    toPrimitive: toPrimitive_FLOAT,
   },
   DOUBLE: {
     primitiveType: 'DOUBLE',
-    toPrimitive: toPrimitive_DOUBLE
+    toPrimitive: toPrimitive_DOUBLE,
   },
   BYTE_ARRAY: {
     primitiveType: 'BYTE_ARRAY',
-    toPrimitive: toPrimitive_BYTE_ARRAY
+    toPrimitive: toPrimitive_BYTE_ARRAY,
   },
   FIXED_LEN_BYTE_ARRAY: {
     primitiveType: 'FIXED_LEN_BYTE_ARRAY',
-    toPrimitive: toPrimitive_BYTE_ARRAY
+    toPrimitive: toPrimitive_BYTE_ARRAY,
   },
   UTF8: {
     primitiveType: 'BYTE_ARRAY',
     originalType: 'UTF8',
     toPrimitive: toPrimitive_UTF8,
-    fromPrimitive: fromPrimitive_UTF8
+    fromPrimitive: fromPrimitive_UTF8,
   },
   TIME_MILLIS: {
     primitiveType: 'INT32',
     originalType: 'TIME_MILLIS',
-    toPrimitive: toPrimitive_TIME_MILLIS
+    toPrimitive: toPrimitive_TIME_MILLIS,
   },
   TIME_MICROS: {
     primitiveType: 'INT64',
     originalType: 'TIME_MICROS',
-    toPrimitive: toPrimitive_TIME_MICROS
+    toPrimitive: toPrimitive_TIME_MICROS,
   },
   DATE: {
     primitiveType: 'INT32',
     originalType: 'DATE',
     toPrimitive: toPrimitive_DATE,
-    fromPrimitive: fromPrimitive_DATE
+    fromPrimitive: fromPrimitive_DATE,
   },
   TIMESTAMP_MILLIS: {
     primitiveType: 'INT64',
     originalType: 'TIMESTAMP_MILLIS',
     toPrimitive: toPrimitive_TIMESTAMP_MILLIS,
-    fromPrimitive: fromPrimitive_TIMESTAMP_MILLIS
+    fromPrimitive: fromPrimitive_TIMESTAMP_MILLIS,
   },
   TIMESTAMP_MICROS: {
     primitiveType: 'INT64',
     originalType: 'TIMESTAMP_MICROS',
     toPrimitive: toPrimitive_TIMESTAMP_MICROS,
-    fromPrimitive: fromPrimitive_TIMESTAMP_MICROS
+    fromPrimitive: fromPrimitive_TIMESTAMP_MICROS,
   },
   UINT_8: {
     primitiveType: 'INT32',
     originalType: 'UINT_8',
-    toPrimitive: toPrimitive_UINT8
+    toPrimitive: toPrimitive_UINT8,
   },
   UINT_16: {
     primitiveType: 'INT32',
     originalType: 'UINT_16',
-    toPrimitive: toPrimitive_UINT16
+    toPrimitive: toPrimitive_UINT16,
   },
   UINT_32: {
     primitiveType: 'INT32',
     originalType: 'UINT_32',
-    toPrimitive: toPrimitive_UINT32
+    toPrimitive: toPrimitive_UINT32,
   },
   UINT_64: {
     primitiveType: 'INT64',
     originalType: 'UINT_64',
-    toPrimitive: toPrimitive_UINT64
+    toPrimitive: toPrimitive_UINT64,
   },
   INT_8: {
     primitiveType: 'INT32',
     originalType: 'INT_8',
-    toPrimitive: toPrimitive_INT8
+    toPrimitive: toPrimitive_INT8,
   },
   INT_16: {
     primitiveType: 'INT32',
     originalType: 'INT_16',
-    toPrimitive: toPrimitive_INT16
+    toPrimitive: toPrimitive_INT16,
   },
   INT_32: {
     primitiveType: 'INT32',
     originalType: 'INT_32',
-    toPrimitive: toPrimitive_INT32
+    toPrimitive: toPrimitive_INT32,
   },
   INT_64: {
     primitiveType: 'INT64',
     originalType: 'INT_64',
-    toPrimitive: toPrimitive_INT64
+    toPrimitive: toPrimitive_INT64,
   },
   JSON: {
     primitiveType: 'BYTE_ARRAY',
     originalType: 'JSON',
     toPrimitive: toPrimitive_JSON,
-    fromPrimitive: fromPrimitive_JSON
+    fromPrimitive: fromPrimitive_JSON,
   },
   BSON: {
     primitiveType: 'BYTE_ARRAY',
     originalType: 'BSON',
     toPrimitive: toPrimitive_BSON,
-    fromPrimitive: fromPrimitive_BSON
+    fromPrimitive: fromPrimitive_BSON,
   },
   INTERVAL: {
     primitiveType: 'FIXED_LEN_BYTE_ARRAY',
     originalType: 'INTERVAL',
     typeLength: 12,
     toPrimitive: toPrimitive_INTERVAL,
-    fromPrimitive: fromPrimitive_INTERVAL
-  }
+    fromPrimitive: fromPrimitive_INTERVAL,
+  },
 };
 
 /**
@@ -325,7 +325,7 @@ const kMillisPerDay = 86400000;
 function toPrimitive_DATE(value: any) {
   /* convert from date */
   if (value instanceof Date) {
-    return value.getTime() / kMillisPerDay;
+    return 0 | (value.getTime() / kMillisPerDay);
   }
 
   /* convert from integer */
@@ -387,7 +387,9 @@ function fromPrimitive_TIMESTAMP_MICROS(value: any) {
 
 function toPrimitive_INTERVAL(value: any) {
   if (!value.months || !value.days || !value.milliseconds) {
-    throw new Error('value for INTERVAL must be object { months: ..., days: ..., milliseconds: ... }');
+    throw new Error(
+      'value for INTERVAL must be object { months: ..., days: ..., milliseconds: ... }'
+    );
   }
 
   const buf = Buffer.alloc(12);

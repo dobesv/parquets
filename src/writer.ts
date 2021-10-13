@@ -1,13 +1,37 @@
 import { Transform, TransformCallback, Writable } from 'stream';
 import { ParquetCodecOptions, PARQUET_CODEC } from './codec';
 import * as Compression from './compression';
-import { ParquetBuffer, ParquetCodec, ParquetData, ParquetField, PrimitiveType } from './declare';
+import {
+  ParquetCodec,
+  ParquetField,
+  ParquetValueArray,
+  PrimitiveType,
+} from './declare';
 import { ParquetSchema } from './schema';
-import * as Shred from './shred';
-// tslint:disable-next-line:max-line-length
-import { ColumnChunk, ColumnMetaData, CompressionCodec, ConvertedType, DataPageHeader, DataPageHeaderV2, Encoding, FieldRepetitionType, FileMetaData, KeyValue, PageHeader, PageType, RowGroup, SchemaElement, Type } from './thrift';
+import {
+  ColumnChunk,
+  ColumnMetaData,
+  CompressionCodec,
+  ConvertedType,
+  DataPageHeader,
+  DataPageHeaderV2,
+  Encoding,
+  FieldRepetitionType,
+  FileMetaData,
+  KeyValue,
+  PageHeader,
+  PageType,
+  RowGroup,
+  SchemaElement,
+  Type,
+} from './thrift';
 import * as Util from './util';
 import Int64 = require('node-int64');
+import {
+  ParquetWriteBuffer,
+  ParquetWriteColumnData,
+  shredRecord,
+} from './shred';
 
 /**
  * Parquet File Magic String
@@ -52,7 +76,6 @@ export interface ParquetWriterOptions {
  * are written.
  */
 export class ParquetWriter<T> {
-
   /**
    * Convenience method to create a new buffered parquet writer that writes to
    * the specified file
@@ -91,7 +114,7 @@ export class ParquetWriter<T> {
 
   public schema: ParquetSchema;
   public envelopeWriter: ParquetEnvelopeWriter;
-  public rowBuffer: ParquetBuffer;
+  public rowBuffer: ParquetWriteBuffer;
   public rowGroupSize: number;
   public closed: boolean;
   public userMetadata: Record<string, string>;
@@ -106,7 +129,7 @@ export class ParquetWriter<T> {
   ) {
     this.schema = schema;
     this.envelopeWriter = envelopeWriter;
-    this.rowBuffer = {};
+    this.rowBuffer = new ParquetWriteBuffer(schema);
     this.rowGroupSize = opts.rowGroupSize || PARQUET_DEFAULT_ROW_GROUP_SIZE;
     this.closed = false;
     this.userMetadata = {};
@@ -127,10 +150,10 @@ export class ParquetWriter<T> {
     if (this.closed) {
       throw new Error('writer was closed');
     }
-    Shred.shredRecord(this.schema, row, this.rowBuffer);
+    shredRecord(this.schema, row, this.rowBuffer);
     if (this.rowBuffer.rowCount >= this.rowGroupSize) {
       await this.envelopeWriter.writeRowGroup(this.rowBuffer);
-      this.rowBuffer = {};
+      this.rowBuffer = new ParquetWriteBuffer(this.schema);
     }
   }
 
@@ -152,7 +175,7 @@ export class ParquetWriter<T> {
       this.rowBuffer.rowCount >= this.rowGroupSize
     ) {
       await this.envelopeWriter.writeRowGroup(this.rowBuffer);
-      this.rowBuffer = {};
+      this.rowBuffer = new ParquetWriteBuffer(this.schema);
     }
 
     await this.envelopeWriter.writeFooter(this.userMetadata);
@@ -253,16 +276,16 @@ export class ParquetEnvelopeWriter {
    * Encode a parquet row group. The records object should be created using the
    * shredRecord method
    */
-  writeRowGroup(records: ParquetBuffer): Promise<void> {
-    const rgroup = encodeRowGroup(this.schema, records, {
+  writeRowGroup(records: ParquetWriteBuffer): Promise<void> {
+    const rowGroup = encodeRowGroup(this.schema, records, {
       baseOffset: this.offset,
       pageSize: this.pageSize,
       useDataPageV2: this.useDataPageV2,
     });
 
     this.rowCount += records.rowCount;
-    this.rowGroups.push(rgroup.metadata);
-    return this.writeSection(rgroup.body);
+    this.rowGroups.push(rowGroup.metadata);
+    return this.writeSection(rowGroup.body);
   }
 
   /**
@@ -329,7 +352,9 @@ export class ParquetTransformer<T> extends Transform {
       if (this.waiting.length) {
         const waiting = this.waiting;
         this.waiting = [];
-        waiting.forEach(([resolve, reject]) => error ? reject(error) : resolve());
+        waiting.forEach(([resolve, reject]) =>
+          error ? reject(error) : resolve()
+        );
       }
       callback(null);
     } catch (err) {
@@ -373,7 +398,7 @@ export class ParquetTransformer<T> extends Transform {
 function encodeValues(
   type: PrimitiveType,
   encoding: ParquetCodec,
-  values: any[],
+  values: ParquetValueArray,
   opts: ParquetCodecOptions
 ) {
   if (!(encoding in PARQUET_CODEC)) {
@@ -387,7 +412,7 @@ function encodeValues(
  */
 function encodeDataPage(
   column: ParquetField,
-  data: ParquetData
+  data: ParquetWriteColumnData
 ): {
   header: PageHeader;
   headerSize: number;
@@ -399,7 +424,7 @@ function encodeDataPage(
     rLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.rlevels,
+      data.rLevels,
       {
         bitWidth: Util.getBitWidth(column.rLevelMax),
         // disableEnvelope: false
@@ -412,7 +437,7 @@ function encodeDataPage(
     dLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.dlevels,
+      data.dLevels,
       {
         bitWidth: Util.getBitWidth(column.dLevelMax),
         // disableEnvelope: false
@@ -458,7 +483,7 @@ function encodeDataPage(
  */
 function encodeDataPageV2(
   column: ParquetField,
-  data: ParquetData,
+  data: ParquetWriteColumnData,
   rowCount: number
 ): {
   header: PageHeader;
@@ -485,7 +510,7 @@ function encodeDataPageV2(
     rLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.rlevels,
+      data.rLevels,
       {
         bitWidth: Util.getBitWidth(column.rLevelMax),
         disableEnvelope: true,
@@ -498,7 +523,7 @@ function encodeDataPageV2(
     dLevelsBuf = encodeValues(
       PARQUET_RDLVL_TYPE,
       PARQUET_RDLVL_ENCODING,
-      data.dlevels,
+      data.dLevels,
       {
         bitWidth: Util.getBitWidth(column.dLevelMax),
         disableEnvelope: true,
@@ -540,7 +565,7 @@ function encodeDataPageV2(
  */
 function encodeColumnChunk(
   column: ParquetField,
-  buffer: ParquetBuffer,
+  buffer: ParquetWriteBuffer,
   offset: number,
   opts: ParquetWriterOptions
 ): {
@@ -602,7 +627,7 @@ function encodeColumnChunk(
  */
 function encodeRowGroup(
   schema: ParquetSchema,
-  data: ParquetBuffer,
+  data: ParquetWriteBuffer,
   opts: ParquetWriterOptions
 ): {
   body: Buffer;

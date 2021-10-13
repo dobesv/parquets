@@ -1,4 +1,4 @@
-import { PrimitiveType } from '../declare';
+import { ParquetValueArray, PrimitiveType } from '../declare';
 
 export interface CursorBuffer {
   buffer: Buffer;
@@ -13,6 +13,15 @@ export interface ParquetCodecOptions {
 }
 
 export interface ParquetCodecKit {
-  encodeValues(type: PrimitiveType, values: any[], opts?: ParquetCodecOptions): Buffer;
-  decodeValues(type: PrimitiveType, cursor: CursorBuffer, count: number, opts: ParquetCodecOptions): any[];
+  encodeValues(
+    type: PrimitiveType,
+    values: ParquetValueArray,
+    opts?: ParquetCodecOptions
+  ): Buffer;
+  decodeValues(
+    type: PrimitiveType,
+    cursor: CursorBuffer,
+    count: number,
+    opts: ParquetCodecOptions
+  ): ParquetValueArray;
 }

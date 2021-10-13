@@ -9,7 +9,7 @@ import {
   RepetitionType,
   SchemaDefinition,
 } from './declare';
-import { materializeRecords, shredBuffer, shredRecord } from './shred';
+import { materializeRecords, ParquetWriteBuffer, shredRecord } from './shred';
 import { PARQUET_LOGICAL_TYPES } from './types';
 
 /**
@@ -73,7 +73,7 @@ export class ParquetSchema {
     return branch;
   }
 
-  shredRecord(record: ParquetRecord, buffer: ParquetBuffer): void {
+  shredRecord(record: ParquetRecord, buffer: ParquetWriteBuffer): void {
     shredRecord(this, record, buffer);
   }
 
@@ -85,10 +85,6 @@ export class ParquetSchema {
     setCompress(this.schema, type);
     setCompress(this.fields, type);
     return this;
-  }
-
-  buffer(): ParquetBuffer {
-    return shredBuffer(this);
   }
 }
 
@@ -114,22 +110,21 @@ function buildFields(
   for (const name in schema) {
     const opts = schema[name];
 
-    /* field repetition type */
-    const required = !opts.optional;
-    const repeated = !!opts.repeated;
-    let rLevelMax = rLevelParentMax;
-    let dLevelMax = dLevelParentMax;
+    // Calculate max dLevel and rLevel for this field
+    const { repeated = false, optional = false } = opts;
 
-    let repetitionType: RepetitionType = 'REQUIRED';
-    if (!required) {
-      repetitionType = 'OPTIONAL';
-      dLevelMax++;
-    }
-    if (repeated) {
-      repetitionType = 'REPEATED';
-      rLevelMax++;
-      if (required) dLevelMax++;
-    }
+    // If this field is repeated, its rLevel is higher than its parent
+    const rLevelMax = rLevelParentMax + +repeated;
+
+    // If this field is optional or repeated, its dLevel is higher than its parent
+    // For repeated fields, the dLevel is used to indicate there are no values at the given rLevel
+    const dLevelMax = dLevelParentMax + +(optional || repeated);
+
+    const repetitionType: RepetitionType = repeated
+      ? 'REPEATED'
+      : optional
+      ? 'OPTIONAL'
+      : 'REQUIRED';
 
     /* nested field */
     if (opts.fields) {

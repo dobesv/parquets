@@ -1,19 +1,63 @@
-import { ParquetBuffer, ParquetData, ParquetField, ParquetRecord } from './declare';
+import {
+  ParquetBuffer,
+  ParquetField,
+  ParquetRecord,
+  ParquetValueArray,
+} from './declare';
 import { ParquetSchema } from './schema';
 import * as Types from './types';
+import { CustomError } from 'ts-custom-error';
 
-export function shredBuffer(schema: ParquetSchema): ParquetBuffer {
-  const columnData: Record<string, ParquetData> = {};
-  for (const field of schema.fieldList) {
-    columnData[field.key] = {
-      dlevels: [],
-      rlevels: [],
-      values: [],
-      count: 0
-    };
+export class ParquetShredError extends CustomError {
+  constructor(message: string) {
+    super(message);
   }
-  return { rowCount: 0, columnData };
 }
+
+export class MissingRequiredFieldShredError extends CustomError {
+  constructor(public fieldName: string) {
+    super(`Missing required field: ${fieldName}`);
+  }
+}
+
+export class TooManyValuesShredError extends CustomError {
+  constructor(public fieldName: string) {
+    super(`Multiple values for non-repeated field: ${fieldName}`);
+  }
+}
+
+export interface ParquetWriteColumnData {
+  dLevels: number[];
+  rLevels: number[];
+  values: ParquetValueArray;
+  count: number;
+}
+
+export class ParquetWriteBuffer {
+  rowCount: number;
+  columnData: Record<string, ParquetWriteColumnData>;
+  constructor(schema: ParquetSchema) {
+    this.columnData = shredColumnBuffers(schema);
+    this.rowCount = 0;
+  }
+}
+
+const shredColumnBuffers = (
+  schema: ParquetSchema
+): Record<string, ParquetWriteColumnData> =>
+  Object.fromEntries(
+    schema.fieldList
+      .filter(field => !field.isNested)
+      .map(field => [
+        field.key,
+        {
+          dLevels: [],
+          rLevels: [],
+          values: [],
+          count: 0,
+        },
+      ])
+  );
 
 /**
  * 'Shred' a record into a list of <value, repetition_level, definition_level>
@@ -29,39 +73,42 @@ export function shredBuffer(schema: ParquetSchema): ParquetBuffer {
  *   buffer = {
  *     columnData: [
  *       'my_col': {
- *          dlevels: [d1, d2, .. dN],
- *          rlevels: [r1, r2, .. rN],
+ *          dLevels: [d1, d2, .. dN],
+ *          rLevels: [r1, r2, .. rN],
  *          values: [v1, v2, .. vN],
  *        }, ...
  *      ],
  *      rowCount: X,
  *   }
  */
-export function shredRecord(schema: ParquetSchema, record: any, buffer: ParquetBuffer): void {
-  /* shred the record, this may raise an exception */
-  const data = shredBuffer(schema).columnData;
-
-  shredRecordFields(schema.fields, record, data, 0, 0);
-
-  /* if no error during shredding, add the shredded record to the buffer */
-  if (!('columnData' in buffer) || !('rowCount' in buffer)) {
-    buffer.rowCount = 1;
-    buffer.columnData = data;
-    return;
-  }
+export function shredRecord(
+  schema: ParquetSchema,
+  record: any,
+  buffer: ParquetWriteBuffer
+): void {
+  // Shred the record fields; this may process fields recursively if the record
+  // has nested records or arrays in it
+  shredRecordFields(schema.fields, record, buffer.columnData, 0, 0);
+  // Increment the row count
   buffer.rowCount += 1;
-  for (const field of schema.fieldList) {
-    Array.prototype.push.apply(buffer.columnData[field.key].rlevels, data[field.key].rlevels);
-    Array.prototype.push.apply(buffer.columnData[field.key].dlevels, data[field.key].dlevels);
-    Array.prototype.push.apply(buffer.columnData[field.key].values, data[field.key].values);
-    buffer.columnData[field.key].count += data[field.key].count;
-  }
 }
 
+/**
+ * Shred a record or nested object into the output buffer.  This updates the data parameter in place.
+ *
+ * Note that because fields can be optional or repeated, the number of elements pushed
+ * onto the arrays in data can vary.
+ *
+ * @param fields Schema information
+ * @param record Record to shred
+ * @param data Output buffer
+ * @param rLevel Current repetition level (used if this is a nested record inside one or more repeated fields)
+ * @param dLevel Current definition level (used if this is a ensted record inside one or more optional fields)
+ */
 function shredRecordFields(
   fields: Record<string, ParquetField>,
   record: any,
-  data: Record<string, ParquetData>,
+  data: Record<string, ParquetWriteColumnData>,
   rLevel: number,
   dLevel: number
 ) {
@@ -69,35 +116,47 @@ function shredRecordFields(
     const field = fields[name];
 
     // fetch values
-    let values = [];
-    if (record && (field.name in record) && record[field.name] !== undefined && record[field.name] !== null) {
-      if (record[field.name].constructor === Array) {
-        values = record[field.name];
+    let values: ParquetValueArray;
+    if (
+      record &&
+      field.name in record &&
+      record[field.name] !== undefined &&
+      record[field.name] !== null
+    ) {
+      const value = record[field.name];
+      if (value.constructor === Array) {
+        values = value;
       } else {
-        values.push(record[field.name]);
+        values = [value];
       }
-    }
-    // check values
-    if (values.length === 0 && !!record && field.repetitionType === 'REQUIRED') {
-      throw new Error(`missing required field: ${field.name}`);
-    }
-    if (values.length > 1 && field.repetitionType !== 'REPEATED') {
-      throw new Error(`too many values for field: ${field.name}`);
+    } else {
+      // Value missing / null
+      values = [];
     }
 
-    // push null
+    // check values
+    if (
+      values.length === 0 &&
+      !!record &&
+      field.repetitionType === 'REQUIRED'
+    ) {
+      throw new MissingRequiredFieldShredError(field.name);
+    }
+    if (values.length > 1 && field.repetitionType !== 'REPEATED') {
+      throw new TooManyValuesShredError(field.name);
+    }
+
+    // Check if there's a value to emit
     if (values.length === 0) {
       if (field.isNested) {
-        shredRecordFields(
-          field.fields,
-          null,
-          data,
-          rLevel,
-          dLevel);
+        // If it's a nested object we'll want push null for all its elements
+        shredRecordFields(field.fields, null, data, rLevel, dLevel);
       } else {
-        data[field.key].count += 1;
-        data[field.key].rlevels.push(rLevel);
-        data[field.key].dlevels.push(dLevel);
+        // If it's a primitive value, mark it as missing
+        const fieldData = data[field.key];
+        fieldData.count += 1;
+        fieldData.rLevels.push(rLevel);
+        fieldData.dLevels.push(dLevel);
       }
       continue;
     }
@@ -106,20 +165,18 @@ function shredRecordFields(
     for (let i = 0; i < values.length; i++) {
       const rlvl = i === 0 ? rLevel : field.rLevelMax;
       if (field.isNested) {
-        shredRecordFields(
-          field.fields,
-          values[i],
-          data,
-          rlvl,
-          field.dLevelMax);
+        shredRecordFields(field.fields, values[i], data, rlvl, field.dLevelMax);
       } else {
-        data[field.key].count += 1;
-        data[field.key].rlevels.push(rlvl);
-        data[field.key].dlevels.push(field.dLevelMax);
-        data[field.key].values.push(Types.toPrimitive(
-          field.originalType || field.primitiveType,
-          values[i]
-        ));
+        const fieldData = data[field.key];
+        fieldData.count += 1;
+        fieldData.rLevels.push(rlvl);
+        fieldData.dLevels.push(field.dLevelMax);
+        (fieldData.values as any[]).push(
+          Types.toPrimitive(
+            field.originalType || field.primitiveType,
+            values[i]
+          )
+        );
       }
     }
   }
@@ -144,7 +201,10 @@ function shredRecordFields(
  *      rowCount: X,
  *   }
  */
-export function materializeRecords(schema: ParquetSchema, buffer: ParquetBuffer): ParquetRecord[] {
+export function materializeRecords(
+  schema: ParquetSchema,
+  buffer: ParquetBuffer
+): ParquetRecord[] {
   const records: ParquetRecord[] = [];
   for (let i = 0; i < buffer.rowCount; i++) records.push({});
   for (const key in buffer.columnData) {
@@ -153,7 +213,25 @@ export function materializeRecords(schema: ParquetSchema, buffer: ParquetBuffer)
   return records;
 }
 
-function materializeColumn(schema: ParquetSchema, buffer: ParquetBuffer, key: string, records: ParquetRecord[]) {
+/**
+ * Read values from a column and update the records array with the values that are
+ * found.
+ *
+ * If a column is in a nested record or array this will create the necessary parent
+ * objects and arrays leading up to it, as well as creating the actual record if there's
+ * no record at the given position in the records array.
+ *
+ * @param schema Parquet schema
+ * @param buffer Data we are parsing
+ * @param key Field key for the column we are loading
+ * @param records records are added or updated in this array as necessary
+ */
+function materializeColumn(
+  schema: ParquetSchema,
+  buffer: ParquetBuffer,
+  key: string,
+  records: ParquetRecord[]
+) {
   const data = buffer.columnData[key];
   if (!data.count) return;
 
@@ -164,8 +242,8 @@ function materializeColumn(schema: ParquetSchema, buffer: ParquetBuffer, key: st
   const rLevels: number[] = new Array(field.rLevelMax + 1).fill(0);
   let vIndex = 0;
   for (let i = 0; i < data.count; i++) {
-    const dLevel = data.dlevels[i];
-    const rLevel = data.rlevels[i];
+    const dLevel = data.dLevels[i];
+    const rLevel = data.rLevels[i];
     rLevels[rLevel]++;
     rLevels.fill(0, rLevel + 1);
 
