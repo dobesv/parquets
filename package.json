@@ -1,7 +1,7 @@
 {
-  "name": "@formative/parquets",
+  "name": "@dobesv/parquets",
   "description": "TypeScript implementation of the Parquet file format, based on parquet.js",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "upstream": "0.10.1",
   "homepage": "https://github.com/dobesv/parquets",
   "author": "dobes@formative.com",
@@ -39,8 +39,7 @@
     "beta": "yarn build && git push --follow-tags && npm publish --tag beta",
     "tsgen": "thrift-typescript --target apache --rootDir . --sourceDir . --outDir codegen parquet.thrift",
     "tsgencore": "thrift-typescript --target thrift-server --rootDir . --sourceDir . --outDir codegen parquet.thrift",
-    "thrift": "thrift --gen js:node parquet.thrift && thrift --gen js:ts parquet.thrift",
-    "publish": "yarn dlx np"
+    "thrift": "thrift --gen js:node parquet.thrift && thrift --gen js:ts parquet.thrift"
   },
   "engines": {
     "node": ">=7.6"
