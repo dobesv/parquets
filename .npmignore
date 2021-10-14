@@ -8,3 +8,7 @@ dump
 data
 !lib
 !src
+# Yarn
+yarn-error.log
+.yarn/*
+.pnp.*
