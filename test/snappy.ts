@@ -87,7 +87,6 @@ test('compress() normal text using Uint8Array', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToUint8Array(textrandomInputString)));
   assert.deepEqual(compressed, compressed2);
   compressed = arrayBufferToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, textrandomInputString);
@@ -98,7 +97,6 @@ test('compress() normal text using ArrayBuffer', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToArrayBuffer(textrandomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
   compressed = arrayBufferToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, textrandomInputString);
@@ -108,7 +106,6 @@ test('compress() normal text using Buffer', () => {
   const compressed = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   const compressed2 = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, textrandomInputString);
@@ -118,7 +115,6 @@ test('uncompress() normal text using Uint8Array', () => {
   let compressed: any = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   compressed = bufferToUint8Array(compressed);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = uint8ArrayToString(uncompressed);
@@ -129,7 +125,6 @@ test('uncompress() normal text using ArrayBuffer', () => {
   let compressed: any = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   compressed = bufferToArrayBuffer(compressed);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = arrayBufferToString(uncompressed);
@@ -140,7 +135,6 @@ test('uncompress() normal text using Buffer', () => {
   const compressed = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(textrandomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, textrandomInputString);
@@ -152,7 +146,6 @@ test('compress() random string of length 100000 using Uint8Array', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToUint8Array(randomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
   compressed = uint8ArrayToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -164,7 +157,6 @@ test('compress() random string of length 100000 using ArrayBuffer', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
   compressed = arrayBufferToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -175,7 +167,6 @@ test('compress() random string of length 100000 using Buffer', () => {
   const compressed = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   const compressed2 = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -187,7 +178,6 @@ test('compress() random string of length 100 using Uint8Array', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToUint8Array(randomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
   compressed = uint8ArrayToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -199,7 +189,6 @@ test('compress() random string of length 100 using ArrayBuffer', () => {
   const compressed2 = native.compressSync(Buffer.from(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(Buffer.from(compressed), compressed2);
   compressed = arrayBufferToBuffer(compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -210,7 +199,6 @@ test('compress() random string of length 100 using Buffer', () => {
   const compressed = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   const compressed2 = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(compressed, compressed2);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = native.uncompressSync(compressed, null) as Buffer;
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
@@ -221,7 +209,6 @@ test('uncompress() random string of length 100000 using Uint8Array', () => {
   let compressed: any = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   compressed = bufferToUint8Array(compressed);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = uint8ArrayToString(uncompressed);
@@ -233,7 +220,6 @@ test('uncompress() random string of length 100000 using ArrayBuffer', () => {
   let compressed: any = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   compressed = bufferToArrayBuffer(compressed);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = arrayBufferToString(uncompressed);
@@ -245,7 +231,6 @@ test('uncompress() random string of length 100000 using Buffer', () => {
   const compressed = native.compressSync(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   const compressedjs = internal.compress(arrayBufferToBuffer(stringToArrayBuffer(randomInputString)));
   assert.deepEqual(compressedjs, compressed);
-  assert.equal(native.isValidCompressedSync(compressed), true);
   const uncompressed = internal.uncompress(compressed);
   const uncompressedString = arrayBufferToString(bufferToArrayBuffer(uncompressed));
   assert.equal(uncompressedString, randomInputString);
