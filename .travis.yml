@@ -5,4 +5,4 @@ install: yarn --immutable
 addons:
   apt:
     packages:
-      - python
+    - python3
