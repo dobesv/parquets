@@ -1,0 +1,43 @@
+{
+  "extends": ["config:base", ":prHourlyLimit1", "docker:enableMajor"],
+  "packageFiles": ["package.json"],
+  "postUpdateOptions": ["yarnDedupeHighest"],
+  "packageRules": [
+    {
+      "packageNames": ["aws-sdk"],
+      "prPriority": 0,
+      "schedule": ["after 9pm on sunday"],
+      "automerge": true
+    },
+    {
+      "packagePatterns": ["^@types/"],
+      "prPriority": 5,
+      "automerge": true
+    },
+    {
+      "depTypeList": ["devDependencies"],
+      "excludePackagePatterns": ["jest"],
+      "minor": {
+        "prPriority": 5,
+        "automerge": true
+      }
+    }
+  ],
+  "pin": {
+    "prPriority": 10,
+    "automerge": true
+  },
+  "major": {
+    "prPriority": 3
+  },
+  "minor": {
+    "prPriority": 2
+  },
+  "patch": {
+    "prPriority": 1
+  },
+  "masterIssue": true,
+  "stabilityDays": 3,
+  "prCreation": "not-pending",
+  "prConcurrentLimit": 25
+}
