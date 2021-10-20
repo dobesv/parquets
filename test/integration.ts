@@ -126,9 +126,7 @@ function mkTestRows() {
   return rows;
 }
 
-async function writeTestData(
-  writer: parquet.ParquetWriter<unknown>,
-) {
+async function writeTestData(writer: parquet.ParquetWriter<unknown>) {
   writer.setMetadata('myuid', '420');
   writer.setMetadata('fnord', 'dronf');
   const rows = mkTestRows();
@@ -368,11 +366,34 @@ async function checkTestDataNameAndQuantityOnly(
   assert.equal(await cursor.next(), null);
 }
 
+async function arrayFromAsyncIterator<T>(it: AsyncIterable<T>) {
+  const result = [];
+  for await (const value of it) {
+    result.push(value);
+  }
+  return result;
+}
+
+async function checkTestDataUsingGetColumnValues(
+  reader: parquet.ParquetReader<unknown>
+) {
+  const rows = mkTestRows();
+  assert.deepEqual(
+    await arrayFromAsyncIterator(reader.getColumnValues(['name'])),
+    rows.map(r => r.name)
+  );
+  assert.deepEqual(
+    await arrayFromAsyncIterator(reader.getColumnValues(['quantity'])),
+    rows.map(({ quantity = null }) => quantity)
+  );
+}
+
 async function checkTestData(reader: parquet.ParquetReader<unknown>) {
   checkTestDataMetadata(reader);
   await checkTestDataAllFields(reader);
   await checkTestDataNameOnly(reader);
   await checkTestDataNameAndQuantityOnly(reader);
+  await checkTestDataUsingGetColumnValues(reader);
   await reader.close();
 }
 
@@ -409,11 +430,26 @@ function checkTestDataFromBufferNameAndQuantityOnly(
   assert.equal(cursor.next(), null);
 }
 
+function checkTestDataFromBufferUsingGetColumnValues(
+  reader: parquet.ParquetBufferReader<unknown>
+) {
+  const rows = mkTestRows();
+  assert.deepEqual(
+    Array.from(reader.getColumnValues(['name'])),
+    rows.map(r => r.name)
+  );
+  assert.deepEqual(
+    Array.from(reader.getColumnValues(['quantity'])),
+    rows.map(({ quantity = null }) => quantity)
+  );
+}
+
 function checkTestDataFromBuffer(reader: parquet.ParquetBufferReader<unknown>) {
   checkTestDataMetadata(reader);
   checkTestDataFromBufferAllFields(reader);
   checkTestDataFromBufferNameOnly(reader);
   checkTestDataFromBufferNameAndQuantityOnly(reader);
+  checkTestDataFromBufferUsingGetColumnValues(reader);
 }
 
 // tslint:disable:ter-prefer-arrow-callback

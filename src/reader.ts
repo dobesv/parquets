@@ -245,6 +245,42 @@ export class ParquetReader<T> implements AsyncIterable<T> {
     );
   }
 
+
+  /**
+   * Get an iterable over a single column.  The column is specified as an array of
+   * strings in order to support nested records.
+   *
+   * The path should not reference a nested record column.
+   *
+   * When a column is repeated the iterable will an array for each row.
+   *
+   * When a column is optional the iterable will produce null for any row missing
+   * the value.
+   *
+   * If a column is repeated and also nested inside another repeated object, then an array of arrays
+   * is returned for each row in the dataset.
+   *
+   * If a column is optional and also nested inside a repeated nested object, then it will be in an array
+   * where the array elements may be null.
+   *
+   * This means you can iterate multiple of these in parallel to walk multiple
+   * columns at once and they will stay in sync as long as the calls to next()
+   * are made in sync.
+   *
+   * @param columnPath
+   */
+  async *getColumnValues(columnPath: string[]): AsyncIterable<any> {
+    for(const rowGroup of this.metadata.row_groups) {
+      const colChunk = findColumnChunk(rowGroup, columnPath);
+      const data = await this.envelopeReader.readColumnChunk(this.schema, colChunk);
+      yield * materializeColumn(
+          this.schema,
+          data,
+          columnPath
+      );
+    }
+  }
+
   /**
    * Return the number of rows in this file. Note that the number of rows is
    * not neccessarily equal to the number of rows in each column.
@@ -572,7 +608,7 @@ export class ParquetBufferReader<T> implements Iterable<T> {
    *
    * @param columnPath
    */
-  *getColumnValues(columnPath: string[]): Iterator<any> {
+  *getColumnValues(columnPath: string[]): Iterable<any> {
     for(const rowGroup of this.metadata.row_groups) {
       const colChunk = findColumnChunk(rowGroup, columnPath);
       const data = this.envelopeReader.readColumnChunk(this.schema, colChunk);
