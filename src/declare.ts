@@ -96,15 +96,18 @@ export interface ParquetField {
    * The maximum repetition level is a count of repeated fields in this field's
    * path (e.g. this field and its ancestors).
    *
-   * When scanning values in the data, the rLevelMax is used to determine whether a REPEATEDvalue
+   * When scanning values in the data, the rLevelMax is used to determine whether a REPEATED value
    * should be added to an existing array or if a new array (or arrays) should be created to
    * add the value to.
    *
    * If the value is not repeated (and neither are any of its ancestor fields) then rLevelMax
    * should be zero.
    *
-   * If the rLevelMax is one and repetitionType === 'REPEATED', this field is itself repeated
+   * If the rLevelMax is 1 and `repetitionType === 'REPEATED'`, this field is itself repeated
    * in its parent object (which is the root for a top-level field).
+   *
+   * Note that fields that do not have `repetitionType === 'REPEATED'` can still have `rLevelMax > 0`
+   * if they are in a nested object that is repeated.
    */
   rLevelMax: number;
 
@@ -115,9 +118,9 @@ export interface ParquetField {
    * dLevelMax is used when decoding to determine whether to expect a value to be
    * present in the output for a given column and row.
    *
-   * If the dLeveLMax is zero, the field is not optional.
+   * If the dLeveLMax is 0, the field is not optional.
    *
-   * If the dLevelMax is one, and the repetitionType === 'OPTIONAL', this field is itself
+   * If the dLevelMax is 1, and the repetitionType === 'OPTIONAL', this field is itself
    * optional in its parent object.
    *
    * If this field is not optional but its parent is an optional value then it will have

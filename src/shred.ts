@@ -1,5 +1,6 @@
 import {
   ParquetBuffer,
+  ParquetColumnData,
   ParquetField,
   ParquetRecord,
   ParquetValueArray,
@@ -208,9 +209,82 @@ export function materializeRecords(
   const records: ParquetRecord[] = [];
   for (let i = 0; i < buffer.rowCount; i++) records.push({});
   for (const key in buffer.columnData) {
-    materializeColumn(schema, buffer, key, records);
+    materializeColumnIntoRecords(schema, buffer, key, records);
   }
   return records;
+}
+
+/**
+ * Support iteration over the values in a single column.
+ *
+ * For a simple column which is not repeated and not nested in a repeated
+ * field, this will give one value for each row in the input.
+ *
+ * If the column is repeated or nested in a repeated column, it will give an
+ * array for each row in the input.
+ *
+ * When there are multiple levels of repetition the iterator will yield
+ * nested arrays.
+ */
+export function* materializeColumn(
+  schema: ParquetSchema,
+  data: ParquetColumnData,
+  columnPath: string[]
+) {
+  const field = schema.findField(columnPath);
+  if (!field) {
+    throw new Error(`No field in schema for ${columnPath}`);
+  }
+  const { dLevelMax, rLevelMax } = field;
+  const rLevelArrays: Array<null | any[]> = [];
+  let vIndex = 0;
+  const count = data.count;
+  for (let i = 0; i < count; i++) {
+    const dLevel = data.dLevels[i];
+    const rLevel = data.rLevels[i];
+
+    // Yield back the top-level array if we're moving to the next row
+    if (rLevelMax > 0 && rLevel === 0 && i > 0) {
+      yield rLevelArrays[0] ?? [];
+    }
+
+    // Reset arrays for all rLevels >= rLevel
+    rLevelArrays.length = rLevel;
+
+    // Check if we actually have a value here
+    if (dLevel >= dLevelMax) {
+      const value = Types.fromPrimitive(
+        field.originalType || field.primitiveType,
+        data.values[vIndex]
+      );
+      vIndex++;
+      if (rLevelMax > 0) {
+        // Insert as array element
+        for (let n = 0; n < rLevelMax; n++) {
+          const v = rLevelArrays[n];
+          if (!v) {
+            const ary: any[] = [];
+            rLevelArrays[n] = ary;
+            if (n > 0) {
+              rLevelArrays[n - 1].push(ary);
+            }
+          }
+        }
+        // Push value onto the leaf-level array
+        rLevelArrays[rLevelMax - 1].push(value);
+      } else {
+        // Emit value
+        yield value;
+      }
+    } else if (rLevelMax === 0) {
+      // Emit null
+      yield null;
+    }
+  }
+  // Yield back the top-level array at the end if this was a repeated field (or nested in one)
+  if (rLevelMax > 0 && count > 0) {
+    yield rLevelArrays[0] ?? [];
+  }
 }
 
 /**
@@ -226,7 +300,7 @@ export function materializeRecords(
  * @param key Field key for the column we are loading
  * @param records records are added or updated in this array as necessary
  */
-function materializeColumn(
+function materializeColumnIntoRecords(
   schema: ParquetSchema,
   buffer: ParquetBuffer,
   key: string,
@@ -237,6 +311,7 @@ function materializeColumn(
 
   const field = schema.findField(key);
   const branch = schema.findFieldBranch(key);
+  const repeated = field.repetitionType === 'REPEATED';
 
   // tslint:disable-next-line:prefer-array-literal
   const rLevels: number[] = new Array(field.rLevelMax + 1).fill(0);
@@ -272,7 +347,7 @@ function materializeColumn(
         data.values[vIndex]
       );
       vIndex++;
-      if (field.repetitionType === 'REPEATED') {
+      if (repeated) {
         if (!(field.name in record)) record[field.name] = [];
         const ix = rLevels[rIndex];
         while (record[field.name].length <= ix) record[field.name].push(null);

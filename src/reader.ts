@@ -28,6 +28,8 @@ import {
 } from './thrift';
 import * as Util from './util';
 import concatValueArrays from './concatValueArrays';
+import { findColumnChunk } from './util';
+import { materializeColumn } from './shred';
 
 /**
  * Parquet File Magic String
@@ -483,6 +485,7 @@ export class ParquetBufferCursor<T> implements Iterable<T> {
   }
 }
 
+
 /**
  * A parquet reader allows retrieving the rows from a parquet file in order.
  * The basic usage is to create a reader and then retrieve a cursor/iterator
@@ -552,10 +555,16 @@ export class ParquetBufferReader<T> implements Iterable<T> {
    *
    * The path should not reference a nested record column.
    *
-   * When a column is repeated the iterable will one array for each row.
+   * When a column is repeated the iterable will an array for each row.
    *
    * When a column is optional the iterable will produce null for any row missing
    * the value.
+   *
+   * If a column is repeated and also nested inside another repeated object, then an array of arrays
+   * is returned for each row in the dataset.
+   *
+   * If a column is optional and also nested inside a repeated nested object, then it will be in an array
+   * where the array elements may be null.
    *
    * This means you can iterate multiple of these in parallel to walk multiple
    * columns at once and they will stay in sync as long as the calls to next()
@@ -563,7 +572,17 @@ export class ParquetBufferReader<T> implements Iterable<T> {
    *
    * @param columnPath
    */
-  getColumnCursor(columnPath: string[]): Iterable<any> {}
+  *getColumnValues(columnPath: string[]): Iterator<any> {
+    for(const rowGroup of this.metadata.row_groups) {
+      const colChunk = findColumnChunk(rowGroup, columnPath);
+      const data = this.envelopeReader.readColumnChunk(this.schema, colChunk);
+      yield * materializeColumn(
+          this.schema,
+          data,
+          columnPath
+      );
+    }
+  }
 
   /**
    * Return the number of rows in this file. Note that the number of rows is

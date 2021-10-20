@@ -4,6 +4,7 @@ import parquet = require('../src');
 const assert = chai.assert;
 import { ParquetBuffer, SchemaDefinition } from '../src/declare';
 import {
+  materializeColumn,
   materializeRecords,
   ParquetWriteBuffer,
   shredRecord,
@@ -510,6 +511,22 @@ describe('ParquetShredder', function () {
       { name: 'kiwi', price: [99, 100] },
       { name: 'banana', price: [42] },
     ]);
+
+    const names = Array.from(
+      materializeColumn(schema, buffer.columnData.name, ['name'])
+    );
+    assert.deepEqual(
+      names,
+      records.map(r => r.name)
+    );
+
+    const prices = Array.from(
+      materializeColumn(schema, buffer.columnData.price, ['price'])
+    );
+    assert.deepEqual(
+      prices,
+      records.map(r => r.price)
+    );
   });
 
   it('should materialize a nested record with nested repeated fields', function () {
@@ -588,6 +605,40 @@ describe('ParquetShredder', function () {
         price: 42.0,
       },
     ]);
+
+    const names = Array.from(
+      materializeColumn(schema, buffer.columnData.name, ['name'])
+    );
+    assert.deepEqual(
+      names,
+      records.map(r => r.name)
+    );
+
+    const quantities = Array.from(
+      materializeColumn(schema, buffer.columnData['stock,quantity'], [
+        'stock',
+        'quantity',
+      ])
+    );
+    assert.deepEqual(
+      quantities,
+      records.map(r =>
+        r.stock?.some((s: any) => !!s.quantity)
+          ? r.stock.map((s: any) => s.quantity ?? [])
+          : []
+      )
+    );
+
+    const warehouses = Array.from(
+      materializeColumn(schema, buffer.columnData['stock,warehouse'], [
+        'stock',
+        'warehouse',
+      ])
+    );
+    assert.deepEqual(
+      warehouses,
+      records.map(r => (r.stock ? r.stock.map((s: any) => s.warehouse) : []))
+    );
   });
 
   it('should materialize a static nested record with blank optional value', function () {
@@ -626,5 +677,16 @@ describe('ParquetShredder', function () {
 
     const records = parquet.ParquetShredder.materializeRecords(schema, buffer);
     assert.deepEqual(records, [{ fruit: { name: 'apple' } }]);
+
+    const names = Array.from(
+      materializeColumn(schema, buffer.columnData['fruit,name'], [
+        'fruit',
+        'name',
+      ])
+    );
+    assert.deepEqual(
+      names,
+      records.map(r => r.fruit.name)
+    );
   });
 });
