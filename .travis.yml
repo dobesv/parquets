@@ -2,8 +2,9 @@ language: node_js
 node_js:
 - 14
 install: yarn --immutable
+dist: focal
 addons:
   apt:
     update: true
     packages:
-    - python
+    - python3
