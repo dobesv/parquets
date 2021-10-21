@@ -6,4 +6,4 @@ addons:
   apt:
     update: true
     packages:
-    - python3
+    - python
