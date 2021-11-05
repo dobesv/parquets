@@ -1,7 +1,7 @@
 {
   "name": "@dobesv/parquets",
   "description": "TypeScript implementation of the Parquet file format, based on parquet.js",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "upstream": "0.10.1",
   "homepage": "https://github.com/dobesv/parquets",
   "author": "dobes@formative.com",
@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "beta": "yarn build && git push --follow-tags && npm publish --tag beta",
-    "build": "yarn clean ; yarn tsc",
+    "build": "yarn clean ; yarn tsc -p . ; yarn tsc -p src",
     "clean": "yarn rimraf ./lib ./build",
     "peer": "npm i brotli lzo lz4js --no-save",
     "prepublish": "yarn build",
