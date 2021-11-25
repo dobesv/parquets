@@ -162,15 +162,18 @@ export function oswrite(os: Writable, buf: Buffer): Promise<void> {
 }
 
 export function osclose(os: Writable): Promise<void> {
-  return new Promise((resolve, reject) => {
-    (os as any).close((err: any) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
+  if ('close' in os) {
+    return new Promise((resolve, reject) => {
+      (os as any).close((err: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
-  });
+  }
+  return Promise.resolve();
 }
 
 export function osopen(

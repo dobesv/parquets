@@ -4,6 +4,7 @@ import { ParquetCompression } from '../src';
 import chai = require('chai');
 import fs = require('fs');
 import parquet = require('../src');
+import stream = require('stream');
 const assert = chai.assert;
 const objectStream = require('object-stream');
 
@@ -144,6 +145,28 @@ async function writeTestFile(opts: TestOptions) {
     opts
   );
   await writeTestData(writer);
+}
+
+async function createTestBuffer(opts: TestOptions) {
+  const schema = mkTestSchema(opts);
+  const chunks: Buffer[] = [];
+  const bufferWritable = new stream.Writable({
+    decodeStrings: true,
+    objectMode: false,
+
+    write(chunk, encoding, callback) {
+      chunks.push(chunk);
+      callback(null);
+    },
+  });
+
+  const writer = await parquet.ParquetWriter.openStream(
+      schema,
+      bufferWritable,
+      opts
+  );
+  await writeTestData(writer);
+  return Buffer.concat(chunks);
 }
 
 async function readTestFile() {
@@ -522,8 +545,7 @@ describe('Parquet', function () {
         useDataPageV2: false,
         compression: 'UNCOMPRESSED',
       };
-      return writeTestFile(opts).then(async function () {
-        const data = await promisify(fs.readFile)('fruits.parquet');
+      return createTestBuffer(opts).then(async function (data) {
         const reader = await parquet.ParquetBufferReader.openBuffer(data);
         await checkTestDataFromBuffer(reader);
       });
