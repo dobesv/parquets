@@ -490,6 +490,12 @@ __metadata:
     ts-node: ^10.3.0
     typescript: ^4.4.4
     varint: ^5.0.2
+  peerDependencies:
+    "@types/bson": "*"
+    "@types/node": "*"
+    "@types/node-int64": "*"
+    "@types/thrift": "*"
+    "@types/varint": "*"
   languageName: unknown
   linkType: soft
 
