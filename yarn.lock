@@ -456,7 +456,6 @@ __metadata:
   resolution: "@dobesv/parquets@workspace:."
   dependencies:
     "@creditkarma/thrift-typescript": ^3.7.2
-    "@types/bson": ^4.0.0
     "@types/chai": ^4.1.7
     "@types/debug": ^4.1.4
     "@types/jest": ^24.0.17
@@ -491,7 +490,6 @@ __metadata:
     typescript: ^4.4.4
     varint: ^5.0.2
   peerDependencies:
-    "@types/bson": "*"
     "@types/node": "*"
     "@types/node-int64": "*"
     "@types/thrift": "*"
@@ -1011,15 +1009,6 @@ __metadata:
   dependencies:
     "@babel/types": ^7.3.0
   checksum: a797ea09c72307569e3ee08aa3900ca744ce3091114084f2dc59b67a45ee7d01df7865252790dbfa787a7915ce892cdc820c9b920f3683292765fc656b08dc63
-  languageName: node
-  linkType: hard
-
-"@types/bson@npm:^4.0.0":
-  version: 4.0.5
-  resolution: "@types/bson@npm:4.0.5"
-  dependencies:
-    "@types/node": "*"
-  checksum: f6c74a68eec836010170e7091399b45fe39e2f7724372441cc00a0fbd0b9f44d901688504174d558edbf220922fa0c7c52fbc4aa0f2136194fa713101b8f2ec9
   languageName: node
   linkType: hard
 
