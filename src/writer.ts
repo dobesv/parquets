@@ -117,6 +117,7 @@ export class ParquetWriter<T> {
   public rowBuffer: ParquetWriteBuffer;
   public rowGroupSize: number;
   public closed: boolean;
+  public headerWritten: boolean;
   public userMetadata: Record<string, string>;
 
   /**
@@ -132,13 +133,26 @@ export class ParquetWriter<T> {
     this.rowBuffer = new ParquetWriteBuffer(schema);
     this.rowGroupSize = opts.rowGroupSize || PARQUET_DEFAULT_ROW_GROUP_SIZE;
     this.closed = false;
+    this.headerWritten = false;
     this.userMetadata = {};
+  }
 
-    try {
-      envelopeWriter.writeHeader();
-    } catch (err) {
-      envelopeWriter.close();
-      throw err;
+  /**
+   * Write the header if it was not already written
+   */
+  async ensureHeaderWritten(): Promise<void> {
+    if(!this.headerWritten) {
+      try {
+        // Set the flag before making the call so that a concurrent call while the header
+        // is being written will not write the header a second time
+        this.headerWritten = true;
+
+        // Go ahead and write the header
+        await this.envelopeWriter.writeHeader();
+      } catch (err) {
+        this.envelopeWriter.close();
+        throw err;
+      }
     }
   }
 
@@ -152,6 +166,7 @@ export class ParquetWriter<T> {
     }
     shredRecord(this.schema, row, this.rowBuffer);
     if (this.rowBuffer.rowCount >= this.rowGroupSize) {
+      await this.ensureHeaderWritten();
       await this.envelopeWriter.writeRowGroup(this.rowBuffer);
       this.rowBuffer = new ParquetWriteBuffer(this.schema);
     }
@@ -169,6 +184,9 @@ export class ParquetWriter<T> {
     }
 
     this.closed = true;
+
+    // Make sure we have written the header even if the file is empty
+    await this.ensureHeaderWritten();
 
     if (
       this.rowBuffer.rowCount > 0 ||
