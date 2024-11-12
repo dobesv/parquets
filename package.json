@@ -28,10 +28,8 @@
     "src"
   ],
   "scripts": {
-    "beta": "yarn build && git push --follow-tags && npm publish --tag beta",
     "build": "yarn clean ; yarn tsc -p . ; yarn tsc -p src",
     "clean": "yarn rimraf ./lib ./build",
-    "peer": "npm i brotli lzo lz4js --no-save",
     "prepublish": "yarn build",
     "test": "yarn build && yarn eslint && yarn jest --verbose test/*.ts",
     "thrift": "thrift --gen js:node parquet.thrift && thrift --gen js:ts parquet.thrift",
