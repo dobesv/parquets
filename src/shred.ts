@@ -27,6 +27,13 @@ export class TooManyValuesShredError extends CustomError {
   }
 }
 
+export interface ColumnStatistics {
+  min: any;
+  max: any;
+  null_count: number;
+  distinct_values: Set<any>;
+}
+
 export interface ParquetWriteColumnData {
   dLevels: number[];
   rLevels: number[];
@@ -37,11 +44,31 @@ export interface ParquetWriteColumnData {
 export class ParquetWriteBuffer {
   rowCount: number;
   columnData: Record<string, ParquetWriteColumnData>;
+  statistics: Record<string, ColumnStatistics>;
+
   constructor(schema: ParquetSchema) {
     this.columnData = shredColumnBuffers(schema);
+    this.statistics = shredStatisticsBuffers(schema);
     this.rowCount = 0;
   }
 }
+
+export const shredStatisticsBuffers = (
+    schema: ParquetSchema
+): Record<string, ColumnStatistics> =>
+    Object.fromEntries(
+        schema.fieldList
+            .filter(field => !field.isNested)
+            .map(field => [
+              field.key,
+              {
+                min: null,
+                max: null,
+                null_count: 0,
+                distinct_values: new Set(),
+              },
+            ])
+    );
 
 const shredColumnBuffers = (
   schema: ParquetSchema
@@ -89,7 +116,7 @@ export function shredRecord(
 ): void {
   // Shred the record fields; this may process fields recursively if the record
   // has nested records or arrays in it
-  shredRecordFields(schema.fields, record, buffer.columnData, 0, 0);
+  shredRecordFields(schema.fields, record, buffer.columnData, buffer.statistics, 0, 0);
   // Increment the row count
   buffer.rowCount += 1;
 }
@@ -107,22 +134,24 @@ export function shredRecord(
  * @param dLevel Current definition level (used if this is a ensted record inside one or more optional fields)
  */
 function shredRecordFields(
-  fields: Record<string, ParquetField>,
-  record: any,
-  data: Record<string, ParquetWriteColumnData>,
-  rLevel: number,
-  dLevel: number
+    fields: Record<string, ParquetField>,
+    record: any,
+    data: Record<string, ParquetWriteColumnData>,
+    statistics: Record<string, ColumnStatistics>,
+    rLevel: number,
+    dLevel: number
 ) {
   for (const name in fields) {
     const field = fields[name];
+    const stats = statistics[field.key];
 
     // fetch values
     let values: ParquetValueArray;
     if (
-      record &&
-      field.name in record &&
-      record[field.name] !== undefined &&
-      record[field.name] !== null
+        record &&
+        field.name in record &&
+        record[field.name] !== undefined &&
+        record[field.name] !== null
     ) {
       const value = record[field.name];
       if (value.constructor === Array) {
@@ -137,9 +166,9 @@ function shredRecordFields(
 
     // check values
     if (
-      values.length === 0 &&
-      !!record &&
-      field.repetitionType === 'REQUIRED'
+        values.length === 0 &&
+        !!record &&
+        field.repetitionType === 'REQUIRED'
     ) {
       throw new MissingRequiredFieldShredError(field.name);
     }
@@ -151,10 +180,11 @@ function shredRecordFields(
     if (values.length === 0) {
       if (field.isNested) {
         // If it's a nested object we'll want push null for all its elements
-        shredRecordFields(field.fields, null, data, rLevel, dLevel);
+        shredRecordFields(field.fields, null, data, statistics, rLevel, dLevel);
       } else {
         // If it's a primitive value, mark it as missing
         const fieldData = data[field.key];
+        stats.null_count++;
         fieldData.count += 1;
         fieldData.rLevels.push(rLevel);
         fieldData.dLevels.push(dLevel);
@@ -166,18 +196,30 @@ function shredRecordFields(
     for (let i = 0; i < values.length; i++) {
       const rlvl = i === 0 ? rLevel : field.rLevelMax;
       if (field.isNested) {
-        shredRecordFields(field.fields, values[i], data, rlvl, field.dLevelMax);
+        shredRecordFields(field.fields, values[i], data, statistics, rlvl, field.dLevelMax);
       } else {
+        const value = Types.toPrimitive(
+            field.originalType || field.primitiveType,
+            values[i]
+        );
+
+        const svalue = Buffer.isBuffer(value) ? value.toString() : value;
+
+        if (stats.min === null || value < stats.min) {
+          stats.min = value;
+        }
+
+        if (stats.max === null || value > stats.max) {
+          stats.max = value;
+        }
+
+        stats.distinct_values.add(svalue);
+
         const fieldData = data[field.key];
         fieldData.count += 1;
         fieldData.rLevels.push(rlvl);
         fieldData.dLevels.push(field.dLevelMax);
-        (fieldData.values as any[]).push(
-          Types.toPrimitive(
-            field.originalType || field.primitiveType,
-            values[i]
-          )
-        );
+        (fieldData.values as any[]).push(value);
       }
     }
   }

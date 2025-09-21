@@ -476,7 +476,6 @@ __metadata:
     jest: "npm:^27.3.1"
     jest-environment-node: "npm:^27.3.1"
     lz4js: "npm:^0.2.0"
-    lzo: "npm:^0.4.11"
     node-int64: "npm:^0.4.0"
     object-stream: "npm:0.0.1"
     prettier: "npm:^2.4.1"
@@ -1661,13 +1660,6 @@ __metadata:
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 10/669632eb3745404c2f822a18fc3a0122d2f9a7a13f7fb8b5823ee19d1d2ff9ee5b52c53367176ea4ad093c332fd5ab4bd0ebae5a8e27917a4105a4cfc86b1005
-  languageName: node
-  linkType: hard
-
-"bindings@npm:~1.2.1":
-  version: 1.2.1
-  resolution: "bindings@npm:1.2.1"
-  checksum: 10/b0f8c25b5c7a49baef864994828ba2b0367e2b95ec9e9e2dd83925f0e570d8f56bf43c41b1bded92df8b114e92ef0862eb69632ebc5e1a165faf4a85e69da9f4
   languageName: node
   linkType: hard
 
@@ -4112,16 +4104,6 @@ __metadata:
   version: 0.2.0
   resolution: "lz4js@npm:0.2.0"
   checksum: 10/11b622888c453ae7c49ed69ba07422f369b36ae8bb642960745781c6ea61d049b2dadbce45b73e18bba8b1faa6b08c242226bea1d9bcac87ebe4ccddf8d1d307
-  languageName: node
-  linkType: hard
-
-"lzo@npm:^0.4.11":
-  version: 0.4.11
-  resolution: "lzo@npm:0.4.11"
-  dependencies:
-    bindings: "npm:~1.2.1"
-    node-gyp: "npm:latest"
-  checksum: 10/c85d73ad0ffec591756fcb63dc0a8ba8543d9de2fd4ccdb3d140810bbd4c807a8d48cfefbeef0b0d9413991b5ddc089cb8e5555eb545cafd1c2546546da7c287
   languageName: node
   linkType: hard
 

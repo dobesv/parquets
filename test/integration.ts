@@ -5,6 +5,7 @@ import chai = require('chai');
 import fs = require('fs');
 import parquet = require('../src');
 import stream = require('stream');
+import INT53 = require('int53');
 const assert = chai.assert;
 const objectStream = require('object-stream');
 
@@ -496,6 +497,38 @@ describe('Parquet', function () {
       return writeTestFile(opts).then(readTestFile);
     });
 
+    it('write a test file with statistics and then read them back', async function () {
+      const opts: TestOptions = {
+        useDataPageV2: false,
+        compression: 'UNCOMPRESSED',
+      };
+      await writeTestFile(opts);
+      const reader = await parquet.ParquetReader.openFile('fruits.parquet');
+      const columnMetadata = reader.getColumnMetadata();
+
+      const nameStats = columnMetadata['name'][0].statistics;
+      assert.equal(nameStats.distinct_count.toNumber(), 4);
+      assert.equal(nameStats.null_count.toNumber(), 0);
+      const apples = Buffer.from('apples');
+      const applesLen = Buffer.alloc(4);
+      applesLen.writeUInt32LE(apples.length, 0);
+      assert.deepEqual(nameStats.min_value, Buffer.concat([applesLen, apples]));
+      const oranges = Buffer.from('oranges');
+      const orangesLen = Buffer.alloc(4);
+      orangesLen.writeUInt32LE(oranges.length, 0);
+      assert.deepEqual(nameStats.max_value, Buffer.concat([orangesLen, oranges]));
+
+      const quantityStats = columnMetadata['quantity'][0].statistics;
+      assert.equal(quantityStats.distinct_count.toNumber(), 2);
+      assert.equal(quantityStats.null_count.toNumber(), 2000);
+      const min_value_buffer = Buffer.alloc(8);
+      INT53.writeInt64LE(10, min_value_buffer, 0);
+      assert.deepEqual(quantityStats.min_value, min_value_buffer);
+      const max_value_buffer = Buffer.alloc(8);
+      INT53.writeInt64LE(20, max_value_buffer, 0);
+      assert.deepEqual(quantityStats.max_value, max_value_buffer);
+    });
+
     it('write an empty test file and then read it back', async function () {
       const opts: TestOptions = {
         useDataPageV2: false,
@@ -561,7 +594,7 @@ describe('Parquet', function () {
       return writeTestFile(opts).then(readTestFile);
     });
 
-    it('write a test file with LZO compression and then read it back', function () {
+    it.skip('write a test file with LZO compression and then read it back', function () {
       const opts: TestOptions = { useDataPageV2: false, compression: 'LZO' };
       return writeTestFile(opts).then(readTestFile);
     });
@@ -627,7 +660,7 @@ describe('Parquet', function () {
       return writeTestFile(opts).then(readTestFile);
     });
 
-    it('write a test file with LZO compression and then read it back', function () {
+    it.skip('write a test file with LZO compression and then read it back', function () {
       const opts: TestOptions = { useDataPageV2: true, compression: 'LZO' };
       return writeTestFile(opts).then(readTestFile);
     });

@@ -21,7 +21,8 @@ const testShred = function (
   for (const record of records) {
     shredRecord(schema, record, buf);
   }
-  assert.deepEqual(buf, expectedShredResult);
+  assert.deepEqual(buf.rowCount, expectedShredResult.rowCount);
+  assert.deepEqual(buf.columnData, expectedShredResult.columnData);
   assert.deepEqual(materializeRecords(schema, buf), records);
 };
 

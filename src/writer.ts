@@ -1,5 +1,6 @@
 import { Transform, TransformCallback, Writable } from 'stream';
 import { ParquetCodecOptions, PARQUET_CODEC } from './codec';
+import { encodeValues as plainEncode } from './codec/plain';
 import * as Compression from './compression';
 import {
   ParquetCodec,
@@ -581,6 +582,8 @@ function encodeDataPageV2(
 /**
  * Encode an array of values into a parquet column chunk
  */
+import { Statistics } from './thrift';
+
 function encodeColumnChunk(
   column: ParquetField,
   buffer: ParquetWriteBuffer,
@@ -592,6 +595,7 @@ function encodeColumnChunk(
   metadataOffset: number;
 } {
   const data = buffer.columnData[column.path.join()];
+  const stats = buffer.statistics[column.path.join()];
   const baseOffset = (opts.baseOffset || 0) + offset;
   /* encode data page(s) */
   // const pages: Buffer[] = [];
@@ -628,6 +632,12 @@ function encodeColumnChunk(
     total_compressed_size,
     type: Type[column.primitiveType],
     codec: CompressionCodec[column.compression],
+    statistics: new Statistics({
+      min_value: encodeValue(stats.min, column),
+      max_value: encodeValue(stats.max, column),
+      null_count: new Int64(stats.null_count),
+      distinct_count: new Int64(stats.distinct_values.size)
+    })
   });
 
   /* list encodings */
@@ -638,6 +648,17 @@ function encodeColumnChunk(
   const metadataOffset = baseOffset + pageBuf.length;
   const body = Buffer.concat([pageBuf, Util.serializeThrift(metadata)]);
   return { body, metadata, metadataOffset };
+}
+
+function encodeValue(value: any, column: ParquetField): Buffer | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  return plainEncode(column.primitiveType, [value], {
+    typeLength: column.typeLength,
+    bitWidth: column.typeLength,
+  });
 }
 
 /**
