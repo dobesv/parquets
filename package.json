@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@creditkarma/thrift-typescript": "^3.7.2",
+    "@duckdb/node-api": "^1.2.0",
     "@types/chai": "^4.1.7",
     "@types/debug": "^4.1.4",
     "@types/jest": "^24.0.17",
@@ -74,6 +75,7 @@
     "jest-environment-node": "^27.3.1",
     "lz4js": "^0.2.0",
     "object-stream": "0.0.1",
+    "papaparse": "^5.4.1",
     "prettier": "^2.4.1",
     "rimraf": "^3.0.2",
     "snappy": "^7.0.3",

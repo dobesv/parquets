@@ -478,6 +478,7 @@ __metadata:
     lz4js: "npm:^0.2.0"
     node-int64: "npm:^0.4.0"
     object-stream: "npm:0.0.1"
+    papaparse: "npm:^5.4.1"
     prettier: "npm:^2.4.1"
     rimraf: "npm:^3.0.2"
     snappy: "npm:^7.0.3"
@@ -4539,6 +4540,13 @@ __metadata:
   version: 2.2.0
   resolution: "p-try@npm:2.2.0"
   checksum: 10/f8a8e9a7693659383f06aec604ad5ead237c7a261c18048a6e1b5b85a5f8a067e469aa24f5bc009b991ea3b058a87f5065ef4176793a200d4917349881216cae
+  languageName: node
+  linkType: hard
+
+"papaparse@npm:^5.4.1":
+  version: 5.5.3
+  resolution: "papaparse@npm:5.5.3"
+  checksum: 10/383e38f8ff910be48b684e7f47b84dbe5e67708669c13bb21f316a0591ef183ff670dfc7eb9f6d0a8b67e21a5b0e8934712cda96ff8fb678d6591e597d108bd1
   languageName: node
   linkType: hard
 

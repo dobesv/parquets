@@ -1,0 +1,3 @@
+[submodule "test/parquet-testing-repo"]
+	path = test/parquet-testing-repo
+	url = https://github.com/apache/parquet-testing.git
