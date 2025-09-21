@@ -1,7 +1,7 @@
 import chai = require('chai');
 const assert = chai.assert;
 import parquet = require('../src');
-import { ParquetWriteBuffer } from '../src/shred';
+import { ParquetWriteBuffer, shredStatisticsBuffers } from '../src/shred';
 
 // tslint:disable:ter-prefer-arrow-callback
 describe('ParquetShredder', function () {
@@ -72,7 +72,7 @@ describe('ParquetShredder', function () {
     schema.shredRecord(r1, buffer);
     schema.shredRecord(r2, buffer);
 
-    assert.deepEqual(buffer, {
+    const expected = {
       rowCount: 2,
       columnData: {
         DocId: {
@@ -111,7 +111,11 @@ describe('ParquetShredder', function () {
           values: ['us', 'gb'].map(s => Buffer.from(s)),
         },
       },
-    });
+      statistics: shredStatisticsBuffers(schema),
+    };
+
+    assert.deepEqual(buffer.rowCount, expected.rowCount);
+    assert.deepEqual(buffer.columnData, expected.columnData);
 
     const records = schema.materializeRecords(buffer);
     assert.deepEqual(records[0], r1);

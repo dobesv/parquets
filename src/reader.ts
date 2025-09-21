@@ -25,6 +25,7 @@ import {
   RowGroup,
   SchemaElement,
   Type,
+  ColumnMetaData
 } from './thrift';
 import * as Util from './util';
 import concatValueArrays from './concatValueArrays';
@@ -305,6 +306,25 @@ export class ParquetReader<T> implements AsyncIterable<T> {
       md[kv.key] = kv.value;
     }
     return md;
+  }
+
+  /**
+   * Returns the column metadata for all columns.
+   */
+  getColumnMetadata(): Record<string, ColumnMetaData[]> {
+    const columnMetadata: Record<string, ColumnMetaData[]> = {};
+
+    for (const rowGroup of this.metadata.row_groups) {
+      for (const columnChunk of rowGroup.columns) {
+        const columnPath = columnChunk.meta_data.path_in_schema.join('.');
+        if (!(columnPath in columnMetadata)) {
+          columnMetadata[columnPath] = [];
+        }
+        columnMetadata[columnPath].push(columnChunk.meta_data);
+      }
+    }
+
+    return columnMetadata;
   }
 
   /**
