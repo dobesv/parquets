@@ -1,4 +1,4 @@
-import 'jest';
+import { describe, it } from 'node:test';
 import { promisify } from 'util';
 import { ParquetCompression } from '../src';
 import chai = require('chai');
@@ -6,7 +6,7 @@ import fs = require('fs');
 import parquet = require('../src');
 import stream = require('stream');
 import INT53 = require('int53');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 const objectStream = require('object-stream');
 
 const TEST_NUM_ROWS = 1000;
@@ -477,8 +477,7 @@ function checkTestDataFromBuffer(reader: parquet.ParquetBufferReader<unknown>) {
 }
 
 // tslint:disable:ter-prefer-arrow-callback
-describe('Parquet', function () {
-  jest.setTimeout(90000);
+describe('Parquet', { timeout: 90000 }, function () {
 
   describe('with DataPageHeaderV1', function () {
     it('write a test file', function () {
@@ -542,7 +541,7 @@ describe('Parquet', function () {
       );
       await writer.close();
       const reader = await parquet.ParquetReader.openFile('empty.parquet');
-      expect(reader.getRowCount()).toBe(0);
+      assert.strictEqual(reader.getRowCount(), 0);
     });
 
     it('write an empty test file with empty schema and then read it back', async function () {
@@ -558,7 +557,7 @@ describe('Parquet', function () {
       );
       await writer.close();
       const reader = await parquet.ParquetReader.openFile('empty.parquet');
-      expect(reader.getRowCount()).toBe(0);
+      assert.strictEqual(reader.getRowCount(), 0);
     });
 
     it('supports reading from a buffer asynchronously', function () {
@@ -632,7 +631,7 @@ describe('Parquet', function () {
       );
       await writer.close();
       const reader = await parquet.ParquetReader.openFile('empty.parquet');
-      expect(reader.getRowCount()).toBe(0);
+      assert.strictEqual(reader.getRowCount(), 0);
     });
 
     it('write an empty test file with empty schema and then read it back', async function () {
@@ -648,7 +647,7 @@ describe('Parquet', function () {
       );
       await writer.close();
       const reader = await parquet.ParquetReader.openFile('empty.parquet');
-      expect(reader.getRowCount()).toBe(0);
+      assert.strictEqual(reader.getRowCount(), 0);
     });
     it('write a test file with GZIP compression and then read it back', function () {
       const opts: TestOptions = { useDataPageV2: true, compression: 'GZIP' };

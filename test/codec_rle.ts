@@ -1,5 +1,6 @@
+import { describe, it } from 'node:test';
 import chai = require('chai');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 import parquet_codec_rle = require('../src/codec/rle');
 
 // tslint:disable:ter-prefer-arrow-callback

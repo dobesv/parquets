@@ -1,11 +1,11 @@
-import 'jest';
+import { describe, test } from 'node:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import chai = require('chai');
 import parquet = require('../src');
 
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 
 const REPO_ROOT = path.join(__dirname, 'parquet-testing-repo');
 const DATA_DIRS = [
@@ -349,8 +349,8 @@ for (const dir of DATA_DIRS) {
     for (const file of files) {
       const name = path.relative(REPO_ROOT, file);
       const allowReason = ALLOW_FILES[path.basename(file)];
-      const testFn = allowReason ? test : test.skip;
-      testFn(`${name} parses, roundtrips, and optional CSV matches`, async () => {
+      const testFn: (name: string, opts: object, fn: () => Promise<void>) => void = allowReason ? test : test.skip;
+      testFn(`${name} parses, roundtrips, and optional CSV matches`, { timeout: 30000 }, async () => {
         const firstRows = await readFirstRows(file, 10);
         // At least able to read something (some files may be empty; allow 0 rows)
         assert(firstRows.length >= 0);
@@ -380,7 +380,7 @@ for (const dir of DATA_DIRS) {
             }
           }
         }
-      }, 30000);
+      });
     }
   });
 }

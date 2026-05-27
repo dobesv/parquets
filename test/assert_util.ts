@@ -1,6 +1,7 @@
+import { test } from 'node:test';
 import chai = require('chai');
 import { ParquetValueArray } from '../src';
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 
 const EPSILON_DEFAULT = 0.01;
 

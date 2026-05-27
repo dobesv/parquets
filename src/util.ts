@@ -5,7 +5,7 @@ import { Writable } from 'stream';
 
 export interface WriteStreamOptions {
   flags?: string;
-  encoding?: string;
+  encoding?: BufferEncoding;
   fd?: number;
   mode?: number;
   autoClose?: boolean;

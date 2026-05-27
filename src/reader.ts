@@ -771,8 +771,7 @@ function decodeColumnChunk(
     colChunk.meta_data.codec
   ) as any;
 
-  const numValues = +colChunk.meta_data.num_values;
-  return decodeDataPages(pagesBuf, field, compression, numValues);
+  return decodeDataPages(pagesBuf, field, compression);
 }
 
 /**
@@ -794,8 +793,7 @@ function decodeValues(
 function decodeDataPages(
   buffer: Buffer,
   column: ParquetField,
-  compression: ParquetCompression,
-  numValues?: number
+  compression: ParquetCompression
 ): ParquetReadData {
   const cursor: CursorBuffer = {
     buffer,
@@ -809,16 +807,10 @@ function decodeDataPages(
   let count = 0;
 
   while (cursor.offset < cursor.size) {
-    // Stop once we have decoded all expected values (guards against trailing
-    // bytes from dictionary pages being included in total_compressed_size).
-    if (numValues !== undefined && count >= numValues) {
-      break;
-    }
-
     // const pageHeader = new parquet_thrift.PageHeader();
     // cursor.offset += parquet_util.decodeThrift(pageHeader, cursor.buffer);
 
-    const { pageHeader, length } = Util.decodePageHeader(cursor.buffer, cursor.offset);
+    const { pageHeader, length } = Util.decodePageHeader(cursor.buffer);
     cursor.offset += length;
 
     const pageType = Util.getThriftEnum(PageType, pageHeader.type);
@@ -827,19 +819,10 @@ function decodeDataPages(
       throw new Error(`Unsupported data page type ${pageType}`);
     }
 
-    // Record cursor position before decoding so we can advance past the full
-    // page body regardless of how the decoders advance the cursor internally.
-    const pageEnd = cursor.offset + pageHeader.compressed_page_size;
-
     const pageData: ParquetReadData =
       pageType === 'DATA_PAGE_V2'
         ? decodeDataPageV2(cursor, pageHeader, column, compression)
         : decodeDataPage(cursor, pageHeader, column, compression);
-
-    // For UNCOMPRESSED data, decoders advance cursor.offset as they read;
-    // for COMPRESSED data, decodeDataPage/V2 already sets cursor.offset = cursorEnd.
-    // In either case, ensure we are positioned at the start of the next page.
-    cursor.offset = pageEnd;
 
     rLevelPages.push(pageData.rLevels);
     dLevelPages.push(pageData.dLevels);

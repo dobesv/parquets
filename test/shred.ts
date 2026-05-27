@@ -1,7 +1,8 @@
+import { describe, it } from 'node:test';
 import chai = require('chai');
 import parquet = require('../src');
 
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 import { ParquetBuffer, SchemaDefinition } from '../src/declare';
 import {
   materializeColumn,
