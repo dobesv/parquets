@@ -1,3 +1,4 @@
+import { test } from 'node:test';
 import chai = require('chai');
 import { ParquetValueArray } from '../src';
 const assert: Chai.AssertStatic = chai.assert;

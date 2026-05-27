@@ -1,3 +1,4 @@
+import { describe, it } from 'node:test';
 import chai = require('chai');
 const assert: Chai.AssertStatic = chai.assert;
 import parquet_codec_plain = require('../src/codec/plain');

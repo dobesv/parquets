@@ -64,7 +64,7 @@ export interface ParquetWriterOptions {
 
   // Write Stream Options
   flags?: string;
-  encoding?: string;
+  encoding?: BufferEncoding;
   fd?: number;
   mode?: number;
   autoClose?: boolean;

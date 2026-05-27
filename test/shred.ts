@@ -1,3 +1,4 @@
+import { describe, it } from 'node:test';
 import chai = require('chai');
 import parquet = require('../src');
 

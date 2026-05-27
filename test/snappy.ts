@@ -1,4 +1,4 @@
-import 'jest';
+import { test } from 'node:test';
 import chai = require('chai');
 const assert: Chai.AssertStatic = chai.assert;
 import fs = require('fs');
