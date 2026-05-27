@@ -119,7 +119,7 @@ function encodeValues_INT32(values: ParquetValueArray): Buffer {
  */
 function decodeValues_INT32(cursor: CursorBuffer, count: number): Int32Array {
   const values =
-    systemIsLittleEndian && cursor.offset % 4 === 0
+    systemIsLittleEndian && (cursor.buffer.byteOffset + cursor.offset) % 4 === 0
       ? // On little-endian systems we can just use the data as-is
         new Int32Array(cursor.buffer.buffer, cursor.buffer.byteOffset + cursor.offset, count)
       : // Otherwise we have to copy and convert the data
@@ -215,7 +215,7 @@ function encodeValues_FLOAT(values: ParquetValueArray): Buffer {
  */
 function decodeValues_FLOAT(cursor: CursorBuffer, count: number): Float32Array {
   const values =
-    systemIsLittleEndian && cursor.offset % 4 === 0
+    systemIsLittleEndian && (cursor.buffer.byteOffset + cursor.offset) % 4 === 0
       ? // On little-endian systems with 4-byte aligned data we can avoid data copying
         new Float32Array(cursor.buffer.buffer, cursor.buffer.byteOffset + cursor.offset, count)
       : // Otherwise we have to copy and convert the data
@@ -253,7 +253,7 @@ function decodeValues_DOUBLE(
   count: number
 ): Float64Array {
   const values =
-    systemIsLittleEndian && cursor.offset % 8 === 0
+    systemIsLittleEndian && (cursor.buffer.byteOffset + cursor.offset) % 8 === 0
       ? // On little-endian systems with 8-byte aligned data we can avoid data copying
         new Float64Array(cursor.buffer.buffer, cursor.buffer.byteOffset + cursor.offset, count)
       : // Otherwise we have to copy and convert the data

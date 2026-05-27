@@ -18,5 +18,6 @@ export {
 export {
   ParquetBufferWriter,
   ParquetBufferWriterOptions,
+  generateParquetBuffer,
 } from './bufferWriter';
 export { ParquetShredder };

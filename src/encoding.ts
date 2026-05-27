@@ -252,23 +252,63 @@ function encodeColumnChunk(
   const data = buffer.columnData[column.path.join()];
   const stats = buffer.statistics[column.path.join()];
   const baseOffset = (opts.baseOffset || 0) + offset;
-  let pageBuf: Buffer;
+  const pageSize = opts.pageSize || PARQUET_DEFAULT_PAGE_SIZE;
+  const pageBuffers: Buffer[] = [];
   let total_uncompressed_size = 0;
   let total_compressed_size = 0;
-  {
-    let result: any;
-    if (opts.useDataPageV2) {
-      result = encodeDataPageV2(column, data, buffer.rowCount);
-    } else {
-      result = encodeDataPage(column, data);
-    }
-    pageBuf = result.page;
+
+  const encodePage = (pageData: ParquetWriteColumnData, rowCount: number) => {
+    const result = opts.useDataPageV2
+      ? encodeDataPageV2(column, pageData, rowCount)
+      : encodeDataPage(column, pageData);
+
+    pageBuffers.push(result.page);
     total_uncompressed_size +=
       result.header.uncompressed_page_size + result.headerSize;
     total_compressed_size +=
       result.header.compressed_page_size + result.headerSize;
+  };
+
+  if (data.count <= pageSize) {
+    encodePage(data, buffer.rowCount);
+  } else {
+    let valueOffset = 0;
+    let start = 0;
+
+    while (start < data.count) {
+      let end = Math.min(start + pageSize, data.count);
+      if (column.rLevelMax > 0 && end < data.count) {
+        while (end < data.count && data.rLevels[end] !== 0) {
+          end += 1;
+        }
+      }
+
+      const dLevels = data.dLevels.slice(start, end);
+      const rLevels = data.rLevels.slice(start, end);
+      let valueCount = 0;
+      for (const dLevel of dLevels) {
+        if (dLevel === column.dLevelMax) {
+          valueCount += 1;
+        }
+      }
+
+      const pageData: ParquetWriteColumnData = {
+        dLevels,
+        rLevels,
+        values: data.values.slice(valueOffset, valueOffset + valueCount),
+        count: end - start,
+      };
+
+      valueOffset += valueCount;
+      const pageRowCount = column.rLevelMax > 0
+        ? pageData.rLevels.filter(r => r === 0).length
+        : pageData.count;
+      encodePage(pageData, pageRowCount);
+      start = end;
+    }
   }
 
+  const pageBuf = Buffer.concat(pageBuffers);
   const metadata = new ColumnMetaData({
     path_in_schema: column.path,
     num_values: data.count,
