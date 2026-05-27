@@ -8,8 +8,10 @@ publishing to npm.
 
 ## Prerequisites (one-time setup)
 
-- `NPM_TOKEN` secret must be set in **GitHub → Settings → Secrets and variables
-  → Actions** with publish rights to `@dobesv/parquets`.
+- npm Trusted Publishing must be configured on the package. Go to
+  **npmjs.com → @dobesv/parquets → Settings → Publishing** and add a trusted
+  publisher pointing to `dobesv/parquets` / workflow `release.yml`. This allows
+  GitHub Actions to publish without a stored `NPM_TOKEN` secret.
 - The `github-actions` branch (or whichever branch contains the CI/CD setup)
   must be merged into `master`.
 
@@ -120,8 +122,12 @@ git push --follow-tags
   `yarn changeset status` to check).
 
 **Publish step fails with 403 / authentication error**
-- Verify the `NPM_TOKEN` secret is set and the token has `Automation` type with
-  publish access to the `@dobesv` scope.
+- Verify Trusted Publishing is configured on npmjs.com for this repo and the
+  `release.yml` workflow file name matches exactly.
+- Check that the job has `permissions: id-token: write` (it does by default in
+  this workflow).
+- Trusted Publishing requires the publish to come from the exact workflow file
+  registered — renaming the file will break it.
 
 **Build fails before publish**
 - The release workflow runs `yarn test` before publishing. Fix the failing
