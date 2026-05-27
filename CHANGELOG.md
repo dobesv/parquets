@@ -1,5 +1,11 @@
 # @dobesv/parquets
 
+## 0.13.0
+
+### Minor Changes
+
+- eaab057: Restore `ParquetBufferWriter`, `generateParquetBuffer`, and related encoding refactor that were accidentally deleted in a squash commit. These were originally introduced in PRs #10 and #12.
+
 ## 0.12.0
 
 ### Minor Changes
