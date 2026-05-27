@@ -23,50 +23,37 @@ export interface ParquetBufferWriterOptions {
 
 /**
  * Synchronous in-memory Parquet writer that accumulates rows and returns a Buffer.
- * Browser-safe: no imports from stream, fs, or zlib.
  */
-export class ParquetBufferWriter<T> {
+export class ParquetBufferWriter<T = unknown> {
   private schema: ParquetSchema;
   private opts: ParquetBufferWriterOptions;
-  private chunks: Buffer[];
-  private offset: number;
-  private rowBuffer: ParquetWriteBuffer;
-  private rowGroups: RowGroup[];
-  private rowCount: number;
-  private closed: boolean;
-  private headerWritten: boolean;
   private rowGroupSize: number;
   private pageSize: number;
+  private rowCount: number = 0;
+  private rowBuffer: ParquetWriteBuffer;
+  private rowGroups: RowGroup[] = [];
+  private chunks: Buffer[] = [];
+  private offset: number = 0;
+  private headerWritten: boolean = false;
+  private closed: boolean = false;
+
+  constructor(schema: ParquetSchema, opts?: ParquetBufferWriterOptions) {
+    this.schema = schema;
+    this.opts = opts || {};
+    this.rowGroupSize = opts?.rowGroupSize || PARQUET_DEFAULT_ROW_GROUP_SIZE;
+    this.pageSize = opts?.pageSize || PARQUET_DEFAULT_PAGE_SIZE;
+    this.rowBuffer = new ParquetWriteBuffer(this.schema);
+  }
 
   /**
-   * Create a new ParquetBufferWriter
+   * Create a new ParquetBufferWriter and return it.
    */
-  static openBuffer<T>(
-    schema: ParquetSchema,
-    opts?: ParquetBufferWriterOptions
-  ): ParquetBufferWriter<T> {
+  static openBuffer<T = unknown>(schema: ParquetSchema, opts?: ParquetBufferWriterOptions): ParquetBufferWriter<T> {
     return new ParquetBufferWriter<T>(schema, opts);
   }
 
   /**
-   * Constructor
-   */
-  constructor(schema: ParquetSchema, opts?: ParquetBufferWriterOptions) {
-    this.schema = schema;
-    this.opts = opts || {};
-    this.chunks = [];
-    this.offset = 0;
-    this.rowBuffer = new ParquetWriteBuffer(schema);
-    this.rowGroups = [];
-    this.rowCount = 0;
-    this.closed = false;
-    this.headerWritten = false;
-    this.rowGroupSize = this.opts.rowGroupSize || PARQUET_DEFAULT_ROW_GROUP_SIZE;
-    this.pageSize = this.opts.pageSize || PARQUET_DEFAULT_PAGE_SIZE;
-  }
-
-  /**
-   * Append a row to the buffer. Synchronous.
+   * Append a row to the buffer.
    */
   appendRow(row: T): void {
     if (this.closed) {
@@ -143,4 +130,20 @@ export class ParquetBufferWriter<T> {
     // Reset row buffer for next row group
     this.rowBuffer = new ParquetWriteBuffer(this.schema);
   }
+}
+
+/**
+ * Convenience function: write an array of rows to a Parquet buffer.
+ * Equivalent to creating a ParquetBufferWriter, appending all rows, and calling toBuffer().
+ */
+export function generateParquetBuffer<T>(
+  schema: ParquetSchema,
+  rows: T[],
+  opts?: ParquetBufferWriterOptions
+): Buffer {
+  const writer = new ParquetBufferWriter<T>(schema, opts);
+  for (const row of rows) {
+    writer.appendRow(row);
+  }
+  return writer.toBuffer();
 }
