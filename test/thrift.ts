@@ -1,7 +1,7 @@
 // @flow
 
 import chai = require('chai');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 import parquet_thrift = require('../src/thrift');
 import parquet_util = require('../src/util');
 

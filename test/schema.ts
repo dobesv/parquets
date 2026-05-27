@@ -1,5 +1,5 @@
 import chai = require('chai');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 import parquet = require('../src');
 
 // tslint:disable:ter-prefer-arrow-callback

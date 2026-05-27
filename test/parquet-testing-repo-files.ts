@@ -5,7 +5,7 @@ import * as os from 'os';
 import chai = require('chai');
 import parquet = require('../src');
 
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 
 const REPO_ROOT = path.join(__dirname, 'parquet-testing-repo');
 const DATA_DIRS = [

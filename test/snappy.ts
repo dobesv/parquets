@@ -1,6 +1,6 @@
 import 'jest';
 import chai = require('chai');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 import fs = require('fs');
 import internal = require('../src/snappy');
 import native = require('snappy');

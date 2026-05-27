@@ -6,7 +6,7 @@ import fs = require('fs');
 import parquet = require('../src');
 import stream = require('stream');
 import INT53 = require('int53');
-const assert = chai.assert;
+const assert: Chai.AssertStatic = chai.assert;
 const objectStream = require('object-stream');
 
 const TEST_NUM_ROWS = 1000;
