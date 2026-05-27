@@ -38,7 +38,7 @@
     "watch": "yarn clean && yarn tsc --watch"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "bson": "^4.5.3",
